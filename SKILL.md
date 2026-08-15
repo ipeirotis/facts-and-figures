@@ -33,7 +33,7 @@ If the request does not identify the capability or target, ask one focused quest
 
 ## Gate the work
 
-Require the repository's data and analysis code plus a shell. Require write access for figure regeneration or a new analysis. If an input or tool is missing, name it and stop; never estimate, reconstruct, or invent a result.
+Require the author's analysis code in the repository, its data reachable in this session as the pipeline itself defines it (a file in the tree, or a remote source the pipeline is already configured to read and this session can access), and a shell. Require write access for figure regeneration or a new analysis. If an input or tool is missing or unreachable, name it and stop; never estimate, reconstruct, substitute another source, or invent a result.
 
 ## Load the manuscript context and scope the files
 
@@ -42,6 +42,8 @@ Before running anything, establish which manuscript you are checking and which o
 ## Choose where the analysis runs
 
 Default to running the author's pipeline locally, read-only. Before reaching for anything larger, read `references/compute-environment.md`: it carries the measure-first rule, how to detect credentials that `cloud-bootstrap` already placed in the repository, the four gates a remote run must pass, and the extra provenance it must carry to stay reproducible. Never move the author's data to a service the repository does not already use.
+
+This decision comes after the protocol's plan is pinned, not before it. Measuring a pipeline means running it, and the protocol fixes the number inventory or the analysis specification before the first run — so pin the plan, then measure, then choose the machine.
 
 ## Run the protocol
 

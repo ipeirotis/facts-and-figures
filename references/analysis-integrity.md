@@ -7,8 +7,21 @@ The three capabilities share the same integrity norms but differ in how much
 they produce.
 
 **Gate condition.** This skill runs only when both hold: (a) the repository
-contains the author's own data and analysis code, a pipeline the author
-already wrote, and (b) the environment grants a shell tool to execute it.
+contains the author's own analysis code, a pipeline the author already wrote,
+and that pipeline's data is reachable in this session as the pipeline itself
+defines it, and (b) the environment grants a shell tool to execute it.
+
+Reachable data is data in the repository, or a remote source the pipeline is
+already configured to read — a warehouse table, a bucket object, a mounted
+share — that this session can actually access under
+`references/compute-environment.md`. What the gate requires is a traced,
+accessible input the author's own pipeline names, not a file that happens to
+sit in the working tree: a repository whose pipeline reads a BigQuery table
+it is configured for passes, and a repository whose data path resolves to
+nothing you can read fails no matter what the tree contains. Configured but
+unreachable is a gate failure, not an invitation to substitute another
+source: say which input could not be reached and stop.
+
 The two generative capabilities (figures, new analyses) additionally need a
 write tool to author new scripts and render new outputs. When any required tool or input is missing, do not fake the pass: name the
 missing prerequisite in `Author decisions`, assert nothing about the numbers
@@ -148,6 +161,14 @@ Compare, value by value, and classify each as one of:
   reclassifying it. And a bound the manuscript reports as exact elsewhere (a
   table cell giving `p = 0.0004`) is a point estimate there, and gets the
   rounding rule.
+
+  Fix the tie convention with the tolerance, so "correctly rounded" cannot
+  mean two things: a pipeline value `v` matches a manuscript value `m`
+  reported to `k` decimals when `|v - m| <= 0.5 x 10^-k`. The interval is
+  closed, so a value sitting exactly on the tie (`1.245` against a reported
+  `1.25`) is a match under either half-up or half-even, which is the right
+  answer: a tie is a rounding convention the author is entitled to, not
+  evidence of a stale number.
 - **mismatch**: the pipeline produces a different value; report both, with
   provenance for the recomputed one
 - **unverifiable**: no pipeline output corresponds to it, the producing

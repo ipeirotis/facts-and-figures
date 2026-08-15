@@ -14,11 +14,28 @@ you already have. Remote compute buys wall-clock time and costs
 reproducibility, money, and a data-movement decision that is the author's to
 make, so it needs a reason that survives being written down.
 
+**Measure after the plan is pinned, never before.** The protocol pins the
+number inventory and the producing commands (capability 1) or the
+specification (capability 3) before the first run, and measuring is a run.
+A timed subset that shows you a coefficient before the plan is fixed is a
+peek at the results, and a plan written after a peek is the garden of
+forking paths however honestly it was chosen. So: pin first, then measure,
+and keep the measurement blind — read resource metrics from it, never
+values.
+
 Before proposing anything larger, measure:
 
-- the size of the actual inputs the pipeline reads (not the repository)
+- the size of the actual inputs the pipeline reads (not the repository), from
+  file sizes, row counts, or a dry run that reports bytes without executing
 - the local CPU count and available memory
-- an observed runtime, from a timed run on a subset or a short profiling run
+- an observed runtime. Prefer a path that cannot surface a result: the
+  pipeline's own dry-run or plan mode, a load-and-parse step with the
+  analysis stage stopped, or a timed run of a stage that produces no
+  reported quantity. When only a subset run will do, run it after the plan
+  is pinned, record the timing, and do not read its output for values; if a
+  value does land in front of you, say so in `Method and provenance` rather
+  than pretending it did not, since the plan's credibility depends on when
+  it was fixed.
 
 "This looks big" is not a measurement. A pipeline nobody has timed is a
 pipeline that usually finishes. Report the measurement when you propose the
@@ -36,9 +53,19 @@ breaks the master rule.
 ## Detecting credentials the repository already has
 
 This skill never creates cloud credentials, never creates service accounts,
-and never modifies IAM. It only detects and uses access the author has
-already established, and hands anything else to the `cloud-bootstrap` skill,
-which owns that lifecycle.
+never modifies IAM, and never decrypts a credentials file itself. It only
+detects and uses access the author has already established, and hands
+anything else to the `cloud-bootstrap` skill, which owns that lifecycle.
+
+That makes `cloud-bootstrap` an **optional runtime prerequisite**: optional
+because everything this skill does locally works without it, and a
+prerequisite because it is the only sanctioned path from an encrypted
+credentials file to an activated session. If the repository is fully
+configured but `cloud-bootstrap` is not installed, remote execution is
+unavailable, not improvised: name the missing skill in `Author decisions`
+with its install location, and run locally or stop. Decrypting the author's
+credentials by hand to get around a missing dependency is never the
+workaround.
 
 Look in the manuscript repository for:
 

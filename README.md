@@ -14,7 +14,9 @@ git clone https://github.com/ipeirotis/facts-and-figures.git ~/.agents/skills/fa
 git clone https://github.com/ipeirotis/facts-and-figures.git ~/.claude/skills/facts-and-figures
 ```
 
-Then ask the agent to verify a manuscript number, regenerate a named figure, or run a precisely named analysis. The skill requires the author's data and code plus shell access; generative tasks also require write access.
+Then ask the agent to verify a manuscript number, regenerate a named figure, or run a precisely named analysis. The skill requires the author's analysis code plus reachable data and shell access; generative tasks also require write access.
+
+[`cloud-bootstrap`](https://github.com/ipeirotis/cloud-bootstrap) is an optional runtime prerequisite. Everything local works without it; it is required only to activate encrypted cloud credentials, which this skill detects but never decrypts itself.
 
 ## What it does
 
