@@ -122,7 +122,8 @@ that ends with the author's data somewhere they did not put it.
    either obtain a bound — a dry-run estimate, a documented rate against a
    known input size, or an enforceable ceiling such as a maximum-bytes-billed
    setting or a budget cap — or do not run, and say which. Never leave a
-   provisioned machine running after the analysis finishes.
+   provisioned machine running after the analysis finishes, and report the
+   teardown rather than asserting it: see "Teardown, confirmed" below.
 4. **The result will still be reproducible.** If the run cannot carry the
    provenance below, it does not qualify as verification, whatever it
    produces.
@@ -146,6 +147,27 @@ output location) plus:
   generation on cloud storage, a partition key with a fixed as-of date) and
   record the pin. Without one, report the result as unverifiable rather than
   as verified, and say why.
+- **Commands with the secrets taken out.** A logged command is only useful
+  if the author can paste it back, and only safe if it carries no secret. A
+  pipeline invoked with a connection string, a signed URL, an API key, or a
+  token embeds that secret in the exact command this skill is otherwise
+  required to record. Redact the value and keep the shape: write
+  `--dsn "$WAREHOUSE_DSN"` or `<signed URL for gs://bucket/path, expires
+  2026-01-01>` in place of the literal, and name the environment variable or
+  secret reference the value came from, so the command remains reproducible
+  by someone who holds the credential. The same applies to anything an
+  environment-capture step emits — a `printenv` dump, a config listing, a
+  connection URL in an error message — and to output pasted into the report.
+  A secret that reaches the report has left the machine; treat a leaked one
+  as needing rotation and say so in `Author decisions`.
+- **Teardown, confirmed.** A run that provisions anything (a VM, a cluster,
+  a notebook instance, a scheduled job) records the teardown command and the
+  final observed state of every resource it created: stopped, deleted, or
+  still running. "Never leave a machine running" is not checkable unless the
+  report says what happened, and a cleanup that silently failed keeps
+  charging the author while the report looks compliant. If teardown fails or
+  cannot be confirmed, say so in `Author decisions` with the resource
+  identifier, rather than closing the report as if it succeeded.
 - **Seeds and ordering.** Record every RNG seed. Where the work is sharded or
   parallel, floating-point results can shift with reduction order, so use the
   pipeline's deterministic reduction whenever it offers one. When it does not,

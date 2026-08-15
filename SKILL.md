@@ -1,6 +1,6 @@
 ---
 name: facts-and-figures
-description: Verify numbers reported in an academic manuscript against the repository's own data and analysis pipeline, regenerate a named figure from the same data with improved presentation, or run a new analysis explicitly specified by the author, such as a robustness check, baseline, or subgroup analysis. Use when the repository contains the author's data and analysis code and the task requires reproducible computation with command-level provenance. Do not use for prose editing, literature searches, citation verification, or exploratory searches for favorable results.
+description: Verify numbers reported in an academic manuscript against the repository's own analysis pipeline, regenerate a named figure from the same data with improved presentation, or run a new analysis explicitly specified by the author, such as a robustness check, baseline, or subgroup analysis. Use when the repository contains the author's analysis code and its data is reachable as the pipeline defines it, whether that data sits in the repository or in a source the pipeline is configured to read such as a warehouse table or bucket object, and the task requires reproducible computation with command-level provenance. Do not use for prose editing, literature searches, citation verification, or exploratory searches for favorable results.
 license: MIT
 metadata:
   version: "0.2.0"
@@ -54,6 +54,6 @@ Read `references/analysis-integrity.md` before acting and follow its capability-
 Return exactly:
 
 1. **Scope and gate:** capability, target, inputs found, and missing prerequisites.
-2. **Method and provenance:** pinned specification, commands, files, environment, and output locations.
+2. **Method and provenance:** pinned specification, commands with secrets redacted, files, environment, output locations, and confirmed teardown of anything provisioned.
 3. **Results:** complete comparisons or results, including null, adverse, and failed outcomes.
 4. **Author decisions:** proposed values or artifacts, unresolved ambiguities, and what the author must decide before adoption.

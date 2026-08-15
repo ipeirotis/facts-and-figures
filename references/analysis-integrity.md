@@ -163,12 +163,25 @@ Compare, value by value, and classify each as one of:
   rounding rule.
 
   Fix the tie convention with the tolerance, so "correctly rounded" cannot
-  mean two things: a pipeline value `v` matches a manuscript value `m`
-  reported to `k` decimals when `|v - m| <= 0.5 x 10^-k`. The interval is
-  closed, so a value sitting exactly on the tie (`1.245` against a reported
-  `1.25`) is a match under either half-up or half-even, which is the right
-  answer: a tie is a rounding convention the author is entitled to, not
-  evidence of a stale number.
+  mean two things. For a manuscript value `m` reported to `k` decimals, with
+  `u = 10^-k`, the accepted set is the half-open interval
+
+      m - u/2  <=  v  <  m + u/2
+
+  which is exactly the set of values that display as `m` under round-half-up.
+  The upper endpoint is excluded, and excluding it is the point: `1.255`
+  against a reported `1.25` displays as `1.26` under both half-up and
+  half-even, so accepting it would certify a number the manuscript does not
+  report. The lower endpoint is included, since `1.245` displays as `1.25`
+  under half-up.
+
+  A value landing exactly on either endpoint is a tie, and a tie is the one
+  case where the two conventions disagree: `1.245` displays as `1.24` under
+  half-even, which most numerical libraries use by default. Do not resolve
+  that silently. Report an endpoint hit as a match under the stated
+  convention *and* name it as a boundary case in `Author decisions`, giving
+  both values, so the author can see that a different rounding mode in their
+  own software would print a different number.
 - **mismatch**: the pipeline produces a different value; report both, with
   provenance for the recomputed one
 - **unverifiable**: no pipeline output corresponds to it, the producing
@@ -201,9 +214,21 @@ every plot uninvited.
    number, an axis range that hides points, a smoothing that was not in the
    original, or a series that was not there is a new analysis, not a
    regeneration, and it routes to capability 3 with capability 3's rules.
+
+   One addition stays inside this capability, under the gate
+   `references/figure-design.md` sets: uncertainty the pipeline already
+   computed (intervals, standard errors) that the original figure omits. It
+   computes nothing new, so it is not capability 3, but it does add marks, so
+   it is not a faithful re-render either. It travels as a clearly labeled
+   variant *beside* the faithful re-render, never instead of it, and it is
+   named in `Author decisions` as an addition rather than a correction.
+   Computing uncertainty the pipeline never produced is capability 3.
 3. **Verify the re-render against the original.** Before proposing it,
    confirm the new figure plots the same values: same data version, same
-   summary statistics behind each mark. Say what you changed (color, scale
+   summary statistics behind each mark. The parity check runs against the
+   faithful re-render; an uncertainty variant is checked the same way on the
+   values it shares with the original, and its added marks are listed as
+   additions rather than counted as parity failures. Say what you changed (color, scale
    labeling, ordering, gridlines) and confirm what you did not (the values).
 4. **Propose side by side.** Present the original and the re-render together,
    with the exact script and command that produced the new one, and let the
@@ -255,7 +280,12 @@ These bind all three capabilities.
   the actual inputs read (file path and content hash) when the tree is dirty
   or the data is unversioned; a run against a mutable remote table is pinned
   to a snapshot or reported as unverifiable, per
-  `references/compute-environment.md`.
+  `references/compute-environment.md`. Log the command with its secrets
+  redacted and their variable names kept, so it stays reproducible without
+  publishing a credential: the rule and its shape are in
+  `references/compute-environment.md`, and it applies to local runs too, since
+  a connection string in a local `make` target is just as exposed once it is
+  written into the report.
 - **No garden of forking paths.** State the analysis before running it, and
   report the result whichever way it points. Never scan specifications,
   subgroups, or outcome definitions for a favorable result; if the author's
@@ -285,6 +315,6 @@ These bind all three capabilities.
 ## Reporting conventions
 
 - **Scope and gate:** name the capability, target, inputs found, and missing prerequisites.
-- **Method and provenance:** give the pinned specification, every producing command, data version, environment (interpreter and package versions, seeds, and for a remote run its region, job ID, and pinned snapshot), input paths and hashes where needed, and output locations.
+- **Method and provenance:** give the pinned specification, every producing command with its secrets redacted, data version, environment (interpreter and package versions, seeds, and for a remote run its region, job ID, and pinned snapshot), input paths and hashes where needed, output locations, and — when the run provisioned anything — the teardown command and the final state of every resource it created.
 - **Results:** for verification, group every manuscript value as match, mismatch, or unverifiable and name its location. For figure regeneration, state what changed in presentation and confirm that values did not change. For new analysis, give the pinned specification and complete result.
 - **Author decisions:** ask one question per mismatch, unverifiable number, unresolved pipeline or specification ambiguity, and proposed artifact or result. The author decides what enters the paper.
