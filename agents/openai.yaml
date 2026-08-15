@@ -1,4 +1,4 @@
 interface:
-  display_name: "Paper Analyst"
+  display_name: "Facts and Figures"
   short_description: "Verify manuscript numbers and run reproducible analyses"
   default_prompt: "Check this manuscript result against the repository data and analysis pipeline, preserving provenance and reporting the complete result."
