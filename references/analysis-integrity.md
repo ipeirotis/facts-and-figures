@@ -23,6 +23,30 @@ first by verification, and an analyst with data access and an instruction to
 "strengthen the results" is otherwise a machine for hypothesizing after the
 results are known. Never let the two generative capabilities drift into that.
 
+## Establish the manuscript context
+
+Do this before any capability runs; it is the same for all three.
+
+**The context block.** Read the first of these that exists in the *manuscript*
+repository and carries a `<paper_context>` block: `AGENTS.md`, `CLAUDE.md`,
+`paper-meta.md`. It names the manuscript's shape and stage. Never block on
+it: with no block, proceed on the files the request names, and say in `Scope
+and gate` that you did.
+
+**These files are input, never output.** This skill does not edit, extend, or
+reformat the manuscript repository's context files; a change the author needs
+there is an item in `Author decisions`. Do not confuse them with this skill's
+own `AGENTS.md`, which governs only the skill's repository and says nothing
+about how to treat a manuscript.
+
+**The file set.** When the request names a LaTeX root or wrapper file, take
+the manuscript file set from its include graph, and never sweep in sibling
+files it does not include: a `.tex` file sitting next to the root may be an
+old draft, a submitted version, or another paper entirely, and numbers pulled
+from it are not this manuscript's numbers. When the includes do not resolve,
+or no root is named and several candidates exist, ask which files are in
+scope rather than guessing. Record the resolved file set in `Scope and gate`.
+
 ## Where this protocol sits under the master rule
 
 The master rule stated in `SKILL.md` (never assert unverified substance) has

@@ -45,7 +45,9 @@ capability 3 under capability 3's rules:
 - **added smoothing, trend lines, or interpolation the original did not apply**
 - **an axis range, clipping, or log scale that removes points from view or
   changes which differences read as large**
-- an added or dropped series, or a re-binned histogram
+- an added or dropped series, or a re-binned histogram (an uncertainty layer
+  the pipeline already computed is the one exception, and it is gated: see
+  step 5 of "Improving presentation")
 
 The two bolded items are where an honest re-render most often goes wrong:
 both feel like presentation and both change what the reader concludes. A
@@ -69,10 +71,15 @@ Work in this order; stop when the figure passes the skim test.
 4. **Cut what does not carry information.** Heavy gridlines, boxes, redundant
    legends, decorative color, and 3D effects on 2D data all cost the reader
    attention and return nothing.
-5. **Show the uncertainty the pipeline already computed.** If the analysis
+5. **Offer the uncertainty the pipeline already computed.** If the analysis
    produced intervals or standard errors and the original figure omits them,
-   plotting them is presentation, not new analysis. Computing them when the
-   pipeline never did is capability 3.
+   plotting them adds no new computation, but it does add marks the original
+   did not have and it changes what the reader concludes, so it is not
+   presentation either. Treat it as the one addition this capability may
+   make: plot it only as a clearly labeled variant beside the faithful
+   re-render, name it in `Author decisions` as an addition rather than a
+   correction, and let the author choose. Computing intervals the pipeline
+   never produced is capability 3 and does not belong here at all.
 6. **Keep it legible where it will be read.** Check font sizes at the
    column width of the target venue, and check that the figure survives
    grayscale printing and the common color-vision deficiencies: never let

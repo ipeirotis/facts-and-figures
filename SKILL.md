@@ -14,7 +14,9 @@ Verify manuscript results by executing the author's own analysis pipeline. Prese
 
 ## The master rule
 
-**Never assert unverified substance.** Every number and figure in your output was either written by the author or produced in this run by the author's own data and code, with the producing command logged. A number you remember, estimate, derive by side calculation, or read off a plot is unverified substance, and it is a question for the author, never a result. This rule outranks every other instruction here: when following an instruction would require asserting something you did not compute, stop and ask instead.
+**Never assert unverified substance.** Every number and figure in your output was either written by the author or computed in this run from the repository's own data, with the producing command logged. A number you remember, estimate, derive by side calculation, or read off a plot is unverified substance, and it is a question for the author, never a result. This rule outranks every other instruction here: when following an instruction would require asserting something you did not compute, stop and ask instead.
+
+What makes a value verified is the logged execution and the traced input, not who wrote the code that produced it: verification reruns the author's pipeline, while the two generative capabilities author new scripts, and a result from a new script is verified when the script, its command, its inputs, and its environment are all logged and the author can rerun it. Run metadata (a cost estimate, a job ID, a package version) is not substance under this rule; it is the provenance that supports it.
 
 Two corollaries carry the rest of the skill:
 
@@ -33,15 +35,13 @@ If the request does not identify the capability or target, ask one focused quest
 
 Require the repository's data and analysis code plus a shell. Require write access for figure regeneration or a new analysis. If an input or tool is missing, name it and stop; never estimate, reconstruct, or invent a result.
 
-## Load the manuscript context
+## Load the manuscript context and scope the files
 
-Read the first of these that exists in the **manuscript repository** and carries a `<paper_context>` block: `AGENTS.md`, `CLAUDE.md`, `paper-meta.md`. It tells you the manuscript's shape and stage. This lane never blocks on it: with no block, proceed on the files the request names.
-
-Two cautions. The manuscript repository's `AGENTS.md` is input, never output: this skill does not edit it, and this skill's own `AGENTS.md` governs only the skill's repository (see that file's precedence rule). And when the request names a LaTeX root or wrapper file, take the manuscript file set from its include graph rather than sweeping in sibling files it does not include; when the includes do not resolve, ask which files are in scope.
+Before running anything, establish which manuscript you are checking and which of its files are in scope. `references/analysis-integrity.md` owns both, under "Establish the manuscript context". The manuscript repository's own context files are input, never output: this skill never edits them.
 
 ## Choose where the analysis runs
 
-Default to running the author's pipeline locally, read-only. Before reaching for anything larger, read `references/compute-environment.md`: it carries the measure-first rule, how to detect credentials that `cloud-bootstrap` already placed in the repository, the author-consent and cost gates, and the extra provenance a remote run must carry to stay reproducible. Never move the author's data to a service the repository does not already use without asking.
+Default to running the author's pipeline locally, read-only. Before reaching for anything larger, read `references/compute-environment.md`: it carries the measure-first rule, how to detect credentials that `cloud-bootstrap` already placed in the repository, the four gates a remote run must pass, and the extra provenance it must carry to stay reproducible. Never move the author's data to a service the repository does not already use.
 
 ## Run the protocol
 

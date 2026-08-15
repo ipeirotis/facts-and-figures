@@ -107,8 +107,12 @@ output location) plus:
   record the pin. Without one, report the result as unverifiable rather than
   as verified, and say why.
 - **Seeds and ordering.** Record every RNG seed. Where the work is sharded or
-  parallel, note that floating-point results can shift with reduction order,
-  and prefer a deterministic reduction when the pipeline offers one.
+  parallel, floating-point results can shift with reduction order, so use the
+  pipeline's deterministic reduction whenever it offers one. When it does not,
+  say so in the report, name what makes the run order-dependent, and classify
+  any value that moves between runs as unverifiable rather than as a match or
+  a mismatch: a number that changes when nothing else did has not been
+  verified by either run.
 
 ## Same rules, more compute
 

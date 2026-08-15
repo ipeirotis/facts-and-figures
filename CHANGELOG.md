@@ -14,12 +14,16 @@ Makes the skill self-contained. Extracted from `blue-pencil`, it carried citatio
 - `SKILL.md` states the master rule (never assert unverified substance) and its two corollaries directly, so `references/analysis-integrity.md`'s appeal to it resolves.
 - `SKILL.md` gains "Load the manuscript context" (the `<paper_context>` block in the manuscript repository's `AGENTS.md`, `CLAUDE.md`, or `paper-meta.md`, plus the include-graph rule for choosing the manuscript file set) and "Choose where the analysis runs".
 - `AGENTS.md` for this repository, carrying the precedence rule that separates it from the manuscript repository's `AGENTS.md`: this file governs the skill's own directory, the manuscript's is read-only input, and installing the skill never writes one next to an author's paper. It also carries the repository layout, the editing invariants, and a shell one-liner that fails on a dangling `references/` citation.
+- "Establish the manuscript context" in `references/analysis-integrity.md`, which owns the context-block lookup, the read-only rule for the manuscript's own context files, and the include-graph rule for choosing the manuscript file set. `SKILL.md` carries only the trigger and the pointer, so the always-loaded entry point stays thin and the protocol has a single owner.
 - A rounding-tolerance rule in verification step 5: state the tolerance before comparing, set it from the manuscript's own reported precision, and never widen it to convert a mismatch into a match.
 - Environment capture (interpreter and package versions, seeds) in verification step 4 and in the provenance norm, for local runs as well as remote ones.
 - `VERSION`, `CHANGELOG.md`, and a `.gitignore` for the proposal directory.
 
 ### Changed
 
+- The master rule defines verified substance by logged execution and traced inputs rather than by who authored the producing code. The earlier wording ("the author's own data and code") would have forbidden reporting results from the new scripts capabilities 2 and 3 exist to write, since it outranks every capability instruction. Run metadata is named as provenance, not substance.
+- Plotting uncertainty the pipeline already computed is no longer classified as presentation. It adds marks the original lacked and changes what the reader concludes, so it is now the capability's one permitted addition, gated: proposed as a labeled variant beside the faithful re-render and named in `Author decisions` as an addition.
+- Deterministic reduction is mandatory where the pipeline offers one; where it does not, the run says so and any value that moves between runs is classified unverifiable rather than matched. "Prefer" left the choice unobservable in the report.
 - Renamed the skill from `paper-analyst` to `facts-and-figures`: `SKILL.md` frontmatter, `README.md`, `agents/openai.yaml`, and the default proposal directory, now `facts-and-figures-out/`.
 - `references/analysis-integrity.md` drops the "lane" framing inherited from `blue-pencil`, where it named one branch of a larger editorial skill, and refers to the skill directly.
 
