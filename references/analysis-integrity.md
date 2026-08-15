@@ -53,8 +53,12 @@ The master rule stated in `SKILL.md` (never assert unverified substance) has
 a computation branch: a number is verified when you computed it from the
 repo's own data, with the producing command logged. This skill is that
 branch, and nothing else. The only numbers and figures it may assert anything
-about are the ones the author's own data and code just produced in front of
-you, with the producing command logged; a number you remember, estimate,
+about are the ones produced in front of you in this run from the repository's
+own data, with the producing command logged. Whose code produced them is not
+the test: verification reruns the author's pipeline, the generative
+capabilities author new scripts, and either way the value is verified when
+its script, command, inputs, and environment are logged and the author can
+rerun it. A number you remember, estimate,
 derive by side calculation, or read off a plot is unverified substance,
 exactly as it is for a prose editor working without data access. A
 regenerated figure asserts nothing new: it must plot the
@@ -133,6 +137,17 @@ Compare, value by value, and classify each as one of:
   correctly rounded to two decimals, and nothing looser. A discrepancy the
   manuscript's precision cannot absorb is a mismatch, however small it looks;
   never widen a tolerance to turn one into a match.
+
+  A value the manuscript states as a bound rather than a point (`p < 0.001`,
+  `all estimates exceed 0.3`, a range, a floor or ceiling) is checked as a
+  predicate, not by equality: fix the predicate before comparing, then ask
+  whether the computed value satisfies it. `p < 0.001` is a match at
+  `0.0004` and a mismatch at `0.0012`. Two notes on bounds. A satisfied bound
+  that is far looser than the computed value supports is still a match; if it
+  understates the result, say so in `Author decisions` rather than
+  reclassifying it. And a bound the manuscript reports as exact elsewhere (a
+  table cell giving `p = 0.0004`) is a point estimate there, and gets the
+  rounding rule.
 - **mismatch**: the pipeline produces a different value; report both, with
   provenance for the recomputed one
 - **unverifiable**: no pipeline output corresponds to it, the producing

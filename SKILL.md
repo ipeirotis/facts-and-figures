@@ -45,7 +45,7 @@ Default to running the author's pipeline locally, read-only. Before reaching for
 
 ## Run the protocol
 
-Read `references/analysis-integrity.md` before acting and follow its capability-specific protocol and no-forking-paths rule. Figure regeneration additionally reads `references/figure-design.md`, which owns what a re-render may change and what it must hold fixed. Log every command that produces a reported value or artifact. Keep generated scripts and outputs outside the author's existing code and manuscript unless the author explicitly chooses to adopt them.
+Read `references/analysis-integrity.md` before acting and follow its capability-specific protocol and no-forking-paths rule. Figure regeneration additionally reads `references/figure-design.md`, which owns what a re-render may change and what it must hold fixed. Log every command that produces a reported value or artifact. Generated scripts and outputs stay in the proposal directory: a run never places them into the author's existing code, data, figures, or manuscript, and never edits those files. Adoption is the author's own step.
 
 ## Return
 

@@ -56,8 +56,17 @@ available":
 |---|---|
 | Config, a credentials file for this user, and the matching passphrase | Access is available. Delegate activation to `cloud-bootstrap`, then proceed under the gates below. |
 | Config and credentials, no passphrase in the environment | Not available in this session. Say so, name the variable, and run locally or stop. Never ask the author to paste a passphrase into the conversation. |
+| Config, but no credentials file for this user (a fresh clone, or a collaborator not yet provisioned) | Not available. This is `cloud-bootstrap`'s add-team-member case: name it in `Author decisions` and hand it over. Never attempt activation, and never read a credentials file belonging to another user. |
 | A passphrase in the environment, no config in the repository | Not available for **this** repository. A key set in the session says nothing about whether this project has cloud resources. Do not infer a project, bucket, or dataset. |
 | Neither | Local only. |
+
+In a multi-provider setup, read each configured provider independently: one
+provider being usable says nothing about the next. Anything that does not
+match a row above is a partial configuration, and every partial configuration
+resolves the same way — treat access as unavailable, say which piece is
+missing, and run locally or stop. Never infer availability from the config
+file alone: it records what the project was set up for, not what this session
+can reach.
 
 Authentication failures (401, 403, expired token, "could not refresh access
 token") are `cloud-bootstrap`'s territory. Hand them over rather than
@@ -81,8 +90,12 @@ that ends with the author's data somewhere they did not put it.
    moving only where the author has explicitly said it may.
 3. **The cost is bounded and known before the run.** Estimate first, with a
    dry run where the service offers one (a BigQuery dry run reports bytes
-   scanned without executing). Ask before a run whose cost you cannot bound,
-   and never leave a provisioned machine running after the analysis finishes.
+   scanned without executing). A cost you cannot bound is a stop, not a
+   question: approval does not turn an unknown cost into a known one, so
+   either obtain a bound — a dry-run estimate, a documented rate against a
+   known input size, or an enforceable ceiling such as a maximum-bytes-billed
+   setting or a budget cap — or do not run, and say which. Never leave a
+   provisioned machine running after the analysis finishes.
 4. **The result will still be reproducible.** If the run cannot carry the
    provenance below, it does not qualify as verification, whatever it
    produces.
@@ -128,7 +141,12 @@ no-forking-paths rule wearing a different hat:
   in the report. Do not pick the run that matches the manuscript, and do not
   quietly rerun until one does.
 
-Finally, the write rule follows the analysis to the cloud: remote jobs author
-new outputs in the proposal location (or a clearly labeled new remote prefix
-or dataset the author names), and never overwrite a table, object, or
-artifact the author's pipeline treats as its own.
+Finally, the write rule follows the analysis to the cloud: remote jobs write
+their outputs to a clearly labeled proposal prefix inside a location the
+project already uses, and never overwrite a table, object, or artifact the
+author's pipeline treats as its own. Gate 2 holds for outputs as it does for
+inputs, so if no existing location can hold them, that is a stop-and-ask, not
+a reason to create a bucket or dataset: the author creates any new
+destination, and names it, before a run writes there. Pull results back into
+the local proposal directory whenever they are small enough for the author to
+inspect without the cloud.
