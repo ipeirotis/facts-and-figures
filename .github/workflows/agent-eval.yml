@@ -1,0 +1,56 @@
+name: agent-eval
+
+# End-to-end eval: headless Claude Code verifies the fixture paper repo and
+# the reports are graded against the answer key. Requires the
+# ANTHROPIC_API_KEY repository secret; without it the job skips with a
+# notice instead of failing every push.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - SKILL.md
+      - references/**
+      - hooks/**
+      - agents/**
+      - evals/**
+
+jobs:
+  agent-eval:
+    name: headless eval against the fixture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: check for API key
+        id: key
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::ANTHROPIC_API_KEY secret not set; skipping the agent eval"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          node-version: 22
+      - name: install Claude Code
+        if: steps.key.outputs.present == 'true'
+        run: npm install -g @anthropic-ai/claude-code
+      - name: run the agent eval
+        if: steps.key.outputs.present == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: evals/run_agent_eval.sh "$RUNNER_TEMP/fnf-eval"
+      - name: upload reports
+        if: always() && steps.key.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-reports
+          path: |
+            ${{ runner.temp }}/fnf-eval/*-report.md
+            ${{ runner.temp }}/fnf-eval/verify/facts-and-figures-out/verification-report.json
+          if-no-files-found: warn

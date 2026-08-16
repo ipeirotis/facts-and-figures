@@ -6,6 +6,19 @@ A reproducibility-first agent skill for checking manuscript numbers against a re
 
 ## Install
 
+### As a Claude Code plugin (recommended)
+
+The repository is its own plugin marketplace. One install activates all
+three pieces — the skill, the isolated-run subagent, and the write-boundary
+hook — and updates arrive when the plugin version changes:
+
+```
+/plugin marketplace add ipeirotis/facts-and-figures
+/plugin install facts-and-figures@facts-and-figures
+```
+
+### As a plain skill (any host)
+
 Copy or clone this repository into your agent's skills directory, for example:
 
 ```bash
@@ -13,6 +26,8 @@ git clone https://github.com/ipeirotis/facts-and-figures.git ~/.agents/skills/fa
 # or, for Claude Code:
 git clone https://github.com/ipeirotis/facts-and-figures.git ~/.claude/skills/facts-and-figures
 ```
+
+With this path the subagent and hook are separate opt-ins, documented below.
 
 Then ask the agent to verify a manuscript number, regenerate a named figure, or run a precisely named analysis. The skill requires the author's analysis code plus reachable data and shell access; generative tasks also require write access.
 
@@ -71,11 +86,70 @@ references/figure-design.md         what a figure re-render may and may not chan
 references/compute-environment.md   local-first execution and cloud provenance
 agents/claude-code/facts-and-figures.md   subagent wrapper for isolated runs
 agents/openai.yaml                  display metadata for non-Claude agent hosts
-hooks/write-boundary.sh             optional PreToolUse guard for the write boundary
+hooks/write-boundary.sh             PreToolUse guard for the write boundary
+hooks/hooks.json                    plugin hook registration for the guard
+.claude-plugin/                     plugin and marketplace manifests
+.github/workflows/                  CI: deterministic checks and the agent eval
 evals/                              eval suite: fixture paper repo, answer key, graders
 AGENTS.md                           guidance for agents editing this repository
 TASKS.md                            development roadmap
 ```
+
+## Machine-readable report and CI
+
+Verification writes `facts-and-figures-out/verification-report.json`
+alongside the prose report whenever the session can write — one record per
+manuscript value with its classification, computed value, tolerance, and
+producing command (`references/verification-report.md` owns the schema).
+That is what makes verification scriptable: CI can parse conclusions
+instead of prose.
+
+To verify a paper repository on every push, install the skill in that
+repository (`.claude/skills/facts-and-figures/`), add an `ANTHROPIC_API_KEY`
+secret, and adapt:
+
+```yaml
+name: verify-manuscript
+on:
+  push:
+    branches: [main]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - run: npm install -g @anthropic-ai/claude-code
+      - name: run verification
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude -p "Using the facts-and-figures skill installed under .claude/skills/, verify every number reported in the manuscript against this repository's analysis pipeline. Produce the skill's full four-section report." \
+            --permission-mode acceptEdits --allowedTools Bash | tee verification-report.md
+      - name: fail on mismatches
+        run: |
+          python3 -c "
+          import json, sys
+          r = json.load(open('facts-and-figures-out/verification-report.json'))
+          bad = [v for v in r['values'] if v['classification'] != 'match']
+          for v in bad: print(v['classification'], v['reported'], '-', v['location'])
+          sys.exit(1 if bad else 0)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification
+          path: |
+            verification-report.md
+            facts-and-figures-out/verification-report.json
+```
+
+The gate on mismatches is the author's policy choice: some papers carry
+legitimately unverifiable values (data agreements, restricted sources), so
+you may prefer failing only on `mismatch` and reporting `unverifiable`
+counts instead. This repository's own CI (`.github/workflows/`) runs the
+deterministic eval layer on every push and the full agent eval against the
+fixture paper on pushes to `main`.
 
 ## Evals
 

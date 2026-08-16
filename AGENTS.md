@@ -52,6 +52,11 @@ agents/claude-code/facts-and-figures.md   subagent wrapper: loads SKILL.md,
 agents/openai.yaml                  display metadata for non-Claude agent hosts
 hooks/write-boundary.sh             PreToolUse guard, armed by the run marker
                                     facts-and-figures-out/.active
+hooks/hooks.json                    plugin hook registration for the guard
+.claude-plugin/                     plugin.json and marketplace.json; the repo
+                                    root is the plugin root (root SKILL.md)
+.github/workflows/                  ci.yml (deterministic checks) and
+                                    agent-eval.yml (headless eval, needs secret)
 evals/                              eval suite: synthetic fixture paper repo,
                                     answer key, deterministic fixture check,
                                     agent-in-the-loop runner and grader
@@ -94,7 +99,11 @@ TASKS.md                            development roadmap and definitions of done
 
 ## Releasing
 
-Update `VERSION`, the `metadata.version` field in `SKILL.md`, and
-`CHANGELOG.md` together. Versions follow semantic versioning: a changed
-output contract, a renamed reference file, or a new hard gate is a major or
-minor bump, not a patch.
+Update `VERSION`, the `metadata.version` field in `SKILL.md`, the
+`version` field in `.claude-plugin/plugin.json`, and `CHANGELOG.md`
+together — plugin installs only receive updates when `plugin.json`'s
+version changes, so a release that skips it never reaches plugin users.
+CI enforces the three-way version match. Versions follow semantic
+versioning: a changed output contract, a renamed reference file, or a new
+hard gate is a major or minor bump, not a patch. Run
+`claude plugin validate . --strict` before releasing.

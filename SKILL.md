@@ -3,7 +3,7 @@ name: facts-and-figures
 description: Verify numbers reported in an academic manuscript against the repository's own analysis pipeline, regenerate a named figure from the same data with improved presentation, or run a new analysis explicitly specified by the author, such as a robustness check, baseline, or subgroup analysis. Use when the repository contains the author's analysis code and its data is reachable as the pipeline defines it, whether that data sits in the repository or in a source the pipeline is configured to read such as a warehouse table or bucket object, and the task requires reproducible computation with command-level provenance. Do not use for prose editing, literature searches, citation verification, or exploratory searches for favorable results.
 license: MIT
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
   author: ipeirotis
   repo: https://github.com/ipeirotis/facts-and-figures
 ---
@@ -59,3 +59,5 @@ Return exactly:
 2. **Method and provenance:** pinned specification, commands with secrets redacted, files, environment, output locations, and confirmed teardown of anything provisioned.
 3. **Results:** complete comparisons or results, including null, adverse, and failed outcomes.
 4. **Author decisions:** proposed values or artifacts, unresolved ambiguities, and what the author must decide before adoption.
+
+Verification additionally writes the machine-readable companion `verification-report.json` into the proposal directory whenever the session can write, carrying the same classifications as the prose; `references/verification-report.md` owns its schema. It stays there like all generated work — the marker is torn down, the report is kept.

@@ -1,0 +1,15 @@
+{
+  "name": "facts-and-figures",
+  "description": "Marketplace for the facts-and-figures plugin: reproducibility-first verification of manuscript numbers against a repository's own analysis pipeline.",
+  "owner": {
+    "name": "ipeirotis",
+    "url": "https://github.com/ipeirotis"
+  },
+  "plugins": [
+    {
+      "name": "facts-and-figures",
+      "source": "./",
+      "description": "Reproducibility-first verification of manuscript numbers, figure re-rendering, and author-specified analyses."
+    }
+  ]
+}

@@ -73,6 +73,16 @@ if command -v claude >/dev/null 2>&1; then
     (cd "$WORK/verify" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/verify-report.md"
     python3 "$EVALS_DIR/grade_report.py" "$WORK/verify-report.md" "$EVALS_DIR/expected.json" || rc=1
 
+    # the skill mandates the machine-readable companion when it can write,
+    # and this workspace is writable — so a missing file is itself a failure
+    JSON_REPORT="$WORK/verify/facts-and-figures-out/verification-report.json"
+    if [ -f "$JSON_REPORT" ]; then
+        python3 "$EVALS_DIR/grade_json_report.py" "$JSON_REPORT" "$EVALS_DIR/expected.json" || rc=1
+    else
+        echo "FAIL  verification-report.json was not written to the proposal directory"
+        rc=1
+    fi
+
     echo "== running gate case =="
     (cd "$WORK/gated" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/gated-report.md"
     python3 "$EVALS_DIR/grade_report.py" --gate "$WORK/gated-report.md" "$EVALS_DIR/expected.json" || rc=1

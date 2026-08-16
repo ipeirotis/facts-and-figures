@@ -51,18 +51,31 @@ when its definition of done holds, not when code for it exists.
   item 5's machine-readable report). `expected.json` is the answer key and
   never enters an eval workspace.
 
-## Open
+## v0.5.0
 
-- [ ] **4. Plugin packaging.** Bundle skill + agent + hook as a Claude Code
-  plugin so the three install as one versioned unit and the hook registers
-  without hand-editing `settings.json`. Keep the plain-skill install path
-  working for non-Claude hosts (`agents/openai.yaml` stays).
-  *Done when:* the plugin manifest exists, installing it activates all three
-  pieces, and `README.md` documents both install paths.
+- [x] **4. Plugin packaging.** The repository root is the plugin root: a
+  single-skill plugin keeps `SKILL.md` where it is, so no restructuring and
+  no drift. `.claude-plugin/plugin.json` names the subagent wrapper
+  explicitly, `hooks/hooks.json` registers the write-boundary guard via
+  `${CLAUDE_PLUGIN_ROOT}`, and `.claude-plugin/marketplace.json` makes the
+  repo its own marketplace (`/plugin marketplace add ipeirotis/facts-and-figures`,
+  then `/plugin install facts-and-figures@facts-and-figures`). One install
+  activates skill, agent, and hook; updates ship by bumping `plugin.json`'s
+  version, which the release checklist and CI now enforce alongside
+  `VERSION` and `SKILL.md`. The plain-skill install path is unchanged, and
+  `claude plugin validate . --strict` passes.
 
-- [ ] **5. Headless / CI mode.** Emit a machine-readable report (one record
-  per value: target, status, producing command) alongside the prose
-  contract, then run verification on manuscript pushes via the Claude Agent
-  SDK. Depends on 3 (evals gate the report format) and is where the agent
-  form pays off most. *Done when:* a CI workflow verifies the fixture repo
-  from task 3 end to end.
+- [x] **5. Headless / CI mode.** Verification now writes a machine-readable
+  companion, `facts-and-figures-out/verification-report.json` — one record
+  per manuscript value with classification, computed value, tolerance, and
+  producing command; `references/verification-report.md` owns the schema
+  and `SKILL.md`'s Return section mandates it whenever the session can
+  write. `evals/grade_json_report.py` grades it exactly (classifications,
+  boundary flags, computed values), alongside the keyword grader for the
+  prose. CI: `ci.yml` runs the deterministic layer, grader self-tests
+  (`evals/test_graders.py` over `evals/tests/`), version-consistency and
+  dangling-reference checks, and plugin validation on every push;
+  `agent-eval.yml` runs the full headless eval against the fixture on
+  pushes to `main` (requires the `ANTHROPIC_API_KEY` secret, skips with a
+  notice without it). `README.md` carries a template workflow for running
+  verification on a real paper repository's pushes.

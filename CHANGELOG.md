@@ -3,6 +3,24 @@
 All notable changes to facts-and-figures (called paper-analyst before v0.2.0) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versions use [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-08-16
+
+Completes the roadmap's items 4 and 5: the repository is now a Claude Code plugin, and verification is scriptable end to end. Minor bump: the output contract gains the machine-readable companion.
+
+### Added
+
+- Plugin packaging. The repository root is the plugin root — a single-skill plugin keeps `SKILL.md` in place, so the plain-skill install path is untouched and nothing is duplicated. `.claude-plugin/plugin.json` (version-pinned, agent path named explicitly), `.claude-plugin/marketplace.json` (the repo is its own marketplace), and `hooks/hooks.json` (registers the write-boundary guard via `${CLAUDE_PLUGIN_ROOT}`). One install activates skill, subagent, and hook: `/plugin marketplace add ipeirotis/facts-and-figures` then `/plugin install facts-and-figures@facts-and-figures`. `claude plugin validate . --strict` passes and CI runs it on every push.
+- The machine-readable verification report. Verification writes `verification-report.json` into the proposal directory whenever the session can write — one record per manuscript value carrying `location`, `reported`, `classification`, `computed`, `tolerance`, `boundary`, and `producing_command` (or `reason` when unverifiable). `references/verification-report.md` owns the schema and its field rules; `SKILL.md`'s Return section carries the mandate. The JSON is substance under the master rule, must agree with the prose report, and stays in the proposal directory — the run marker is torn down, the report is kept.
+- `evals/grade_json_report.py`, exact grading over the JSON companion: schema and required fields, classification equality, boundary flags, computed values against the documented true values (percent targets accepted in either unit), producing commands present, and no computed value asserted for unverifiable targets. `run_agent_eval.sh` grades both layers and fails if the companion is missing from a writable workspace.
+- `evals/test_graders.py` and `evals/tests/`: deterministic grader self-tests (good, bad, and gate mock reports for both graders) so a grader regression is caught without an API key.
+- CI workflows. `ci.yml`: fixture self-check, grader self-tests, dangling-reference check, three-way version consistency (`VERSION`, `SKILL.md`, `plugin.json`), and strict plugin validation on every push and pull request. `agent-eval.yml`: the full headless eval against the fixture on pushes to `main` touching runtime files, gated on the `ANTHROPIC_API_KEY` secret with a clean skip when absent, reports uploaded as artifacts.
+- A template workflow in `README.md` for verifying a real paper repository on every push, with the policy note that failing on `unverifiable` is the author's choice, not a default.
+
+### Changed
+
+- The subagent wrapper prefers invoking the `facts-and-figures` skill directly when a plugin install exposes it, falling back to locating `SKILL.md` on disk.
+- The release checklist in `AGENTS.md` adds `.claude-plugin/plugin.json` to the version-bump set — plugin users only receive updates when that version changes — and asks for strict plugin validation before releasing.
+
 ## [0.4.0] - 2026-08-16
 
 Adds the eval suite (TASKS.md item 3). The skill's runtime files are unchanged; what is new is the apparatus for checking that the protocol is actually followed.

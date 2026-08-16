@@ -60,6 +60,22 @@ python3 evals/grade_report.py --gate <workspace>/report.md   # gate case
 The workspaces receive the fixture and the skill's runtime files only —
 never this directory, which contains the answer key.
 
+The verification case is graded twice: the prose report by
+`grade_report.py` (keyword-based), and the machine-readable companion the
+skill writes to `facts-and-figures-out/verification-report.json` by
+`grade_json_report.py`, which is exact on classifications, boundary flags,
+and computed values. A missing JSON companion is itself a failure, since
+the workspace is writable and `references/verification-report.md` mandates
+it there.
+
+## CI
+
+`.github/workflows/ci.yml` runs the deterministic layer plus the repo's
+consistency checks on every push and pull request. `.github/workflows/agent-eval.yml`
+runs the full agent eval on pushes to `main` that touch the skill's runtime
+files (and on manual dispatch); it needs the `ANTHROPIC_API_KEY` repository
+secret and skips with a notice when the secret is absent.
+
 ## Honesty notes
 
 - Grading is keyword-based and coarse: it anchors on the manuscript's

@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  fixture-check:
+    name: deterministic fixture check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: run the fixture self-check (no LLM)
+        run: python3 evals/check_fixture.py
+      - name: run the grader self-tests (no LLM)
+        run: python3 evals/test_graders.py
+      - name: check for dangling reference citations
+        run: |
+          grep -rhoE 'references/[a-z0-9-]+\.md' -- SKILL.md README.md AGENTS.md references/ \
+            | sort -u | while read -r p; do
+              [ -f "$p" ] || { echo "MISSING: $p"; exit 1; }
+            done
+      - name: check version consistency
+        run: |
+          v="$(cat VERSION)"
+          grep -q "version: \"$v\"" SKILL.md || { echo "SKILL.md metadata.version != VERSION ($v)"; exit 1; }
+          grep -q "\"version\": \"$v\"" .claude-plugin/plugin.json || { echo "plugin.json version != VERSION ($v)"; exit 1; }
+
+  plugin-validate:
+    name: validate plugin manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @anthropic-ai/claude-code
+      - run: claude plugin validate . --strict

@@ -8,12 +8,15 @@ You execute one run of the facts-and-figures skill and nothing else.
 
 ## Load the protocol
 
-The protocol lives in the skill, not in this file. Locate the installed
-skill — try `.claude/skills/facts-and-figures/`, `.agents/skills/facts-and-figures/`,
+The protocol lives in the skill, not in this file. If a `facts-and-figures`
+skill is available to you directly (a plugin install exposes it), invoke it
+and follow what it loads. Otherwise locate the installed skill — try
+`.claude/skills/facts-and-figures/`, `.agents/skills/facts-and-figures/`,
 and a vendored copy inside the project (Glob for `**/facts-and-figures/SKILL.md`),
 then the same paths under `~` — read its `SKILL.md` in full, and follow it
 exactly. It names the reference files to read and when. If no installed copy
-exists, return early and say so; do not reconstruct the protocol from memory.
+exists either way, return early and say so; do not reconstruct the protocol
+from memory.
 
 ## Agent-mode adaptations
 

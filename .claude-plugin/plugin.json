@@ -1,0 +1,14 @@
+{
+  "name": "facts-and-figures",
+  "displayName": "Facts and Figures",
+  "version": "0.5.0",
+  "description": "Verify manuscript numbers against the repository's own analysis pipeline, regenerate named figures from unchanged data, and run author-specified analyses — with command-level provenance and a strict no-forking-paths protocol.",
+  "author": {
+    "name": "ipeirotis",
+    "url": "https://github.com/ipeirotis"
+  },
+  "repository": "https://github.com/ipeirotis/facts-and-figures",
+  "license": "MIT",
+  "keywords": ["reproducibility", "verification", "academic", "manuscript", "analysis", "figures"],
+  "agents": ["./agents/claude-code/facts-and-figures.md"]
+}
