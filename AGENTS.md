@@ -47,7 +47,12 @@ references/analysis-integrity.md    the protocol: three capabilities, five
 references/figure-design.md         capability 2: what a re-render may change
 references/compute-environment.md   local-first execution, cloud-bootstrap
                                     detection, provenance for remote runs
+agents/claude-code/facts-and-figures.md   subagent wrapper: loads SKILL.md,
+                                    adds only agent-mode adaptations
 agents/openai.yaml                  display metadata for non-Claude agent hosts
+hooks/write-boundary.sh             PreToolUse guard, armed by the run marker
+                                    facts-and-figures-out/.active
+TASKS.md                            development roadmap and definitions of done
 ```
 
 ## Invariants when editing
@@ -77,6 +82,12 @@ agents/openai.yaml                  display metadata for non-Claude agent hosts
   regression however useful it looks.
 - **Additions state a rule, not a preference.** Each one should be checkable
   by reading the output: a reader can tell whether it was followed.
+- **Wrappers point, never restate.** The protocol has one home: `SKILL.md`
+  and `references/`. The subagent wrapper, the hook, and any future packaging
+  direct the reader there and add only what their form requires (the
+  wrapper's agent-mode adaptations, the hook's deny message). A wrapper that
+  paraphrases a rule will drift from it; if a wrapper needs a rule, the rule
+  moves into the skill and the wrapper cites it.
 
 ## Releasing
 

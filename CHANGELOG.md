@@ -3,6 +3,18 @@
 All notable changes to facts-and-figures (called paper-analyst before v0.2.0) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versions use [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-08-16
+
+Adds an execution form and a mechanical guard around the existing protocol without moving the protocol itself: `SKILL.md` and `references/` remain the single source of truth, and the new files point at them rather than restating them. Minor bump per the release rule — the run marker is a new observable step in the gate, and two new install surfaces exist.
+
+### Added
+
+- `agents/claude-code/facts-and-figures.md`, a subagent wrapper that runs the protocol in an isolated context. Isolation is an integrity feature, not hygiene: the run receives only the pinned request, never the surrounding conversation where the author may have said what they hope the numbers show — the contamination the no-forking-paths rule exists to prevent. The wrapper locates the installed skill, reads `SKILL.md`, and adds only the agent-mode adaptations: a mid-run question becomes an early return, a failed gate is an early return, outcome-predicting framing in the request is ignored and disclosed, and the final message is exactly the four-section contract. Its tool list excludes web access on purpose. Installed by copying into `~/.claude/agents/` or a project's `.claude/agents/`.
+- `hooks/write-boundary.sh`, a Claude Code `PreToolUse` guard for the skill's headline promise, which was previously prose only. While the run marker `facts-and-figures-out/.active` exists, it denies `Write`/`Edit`/`MultiEdit`/`NotebookEdit` outside the proposal directory (with `FACTS_AND_FIGURES_OUT` overriding the directory when the author named another); without the marker it is inert, so ordinary editing sessions in the same repository are unaffected. Fail-open by design, and documented as a guardrail rather than a sandbox: shell-level writes are not intercepted, and the master rule remains the primary control. Registration instructions live in `README.md`.
+- A run-marker rule in `SKILL.md`'s gate step: when the gates pass and the session can write, create `facts-and-figures-out/.active` before the first command; its removal falls under the teardown already confirmed in Return. Read-only verification sessions, which cannot create the marker, degrade gracefully — the hook simply stays inert.
+- `TASKS.md`, the development roadmap with definitions of done. Open items: an eval suite over a fixture paper repository, plugin packaging so skill + agent + hook install as one unit, and a headless/CI mode built on a machine-readable report.
+- An invariant in `AGENTS.md`: wrappers point, never restate. The subagent wrapper, the hook, and any future packaging direct the reader to `SKILL.md` and add only what their form requires; a wrapper that paraphrases a rule will drift from it.
+
 ## [0.2.0] - 2026-08-15
 
 Makes the skill self-contained. Extracted from `blue-pencil`, it carried citations to reference files that did not come with it: figure regeneration pointed at `blue-pencil`'s `edit-checks.md` for its design guidance, and the protocol appealed to a master rule the standalone `SKILL.md` never stated. Both are now resolved inside this repository, and the skill gains the two things the extraction dropped that it actually needed: the manuscript-context step and an explicit account of where the analysis runs.

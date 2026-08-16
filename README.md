@@ -18,6 +18,38 @@ Then ask the agent to verify a manuscript number, regenerate a named figure, or 
 
 [`cloud-bootstrap`](https://github.com/ipeirotis/cloud-bootstrap) is an optional runtime prerequisite. Everything local works without it; it is required only to activate encrypted cloud credentials, which this skill detects but never decrypts itself.
 
+### Optional: run it as an isolated subagent (Claude Code)
+
+```bash
+cp agents/claude-code/facts-and-figures.md ~/.claude/agents/   # or <project>/.claude/agents/
+```
+
+Then delegate: *"Use the facts-and-figures agent to verify the numbers in Table 2."* The subagent runs the same protocol in its own context. That isolation is an integrity feature, not just hygiene: the run receives only the pinned request, never the surrounding conversation where the author may have said what they hope the numbers show — the contamination the no-forking-paths rule exists to prevent. It also keeps pipeline logs out of the main conversation and allows parallel runs, one per figure or section. The wrapper carries no protocol of its own; it locates the installed skill and follows `SKILL.md`.
+
+### Optional: enforce the write boundary mechanically (Claude Code)
+
+Register `hooks/write-boundary.sh` as a `PreToolUse` hook in the manuscript repository's `.claude/settings.json`, adjusting the path to where the skill is installed:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/skills/facts-and-figures/hooks/write-boundary.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+While a run is active (the skill creates `facts-and-figures-out/.active` when its gates pass, and removes it at teardown), the hook denies file edits outside the proposal directory; without the marker it is inert, so ordinary editing sessions in the same repository are unaffected. If the author named a different proposal directory, set `FACTS_AND_FIGURES_OUT` to it. This is a guardrail, not a sandbox — writes made through shell commands are not intercepted, and the skill's master rule remains the primary control.
+
 ## What it does
 
 | Capability | Produces | Requires |
@@ -37,7 +69,11 @@ SKILL.md                            entry point: master rule, capabilities, gate
 references/analysis-integrity.md    the protocol and integrity norms
 references/figure-design.md         what a figure re-render may and may not change
 references/compute-environment.md   local-first execution and cloud provenance
+agents/claude-code/facts-and-figures.md   subagent wrapper for isolated runs
+agents/openai.yaml                  display metadata for non-Claude agent hosts
+hooks/write-boundary.sh             optional PreToolUse guard for the write boundary
 AGENTS.md                           guidance for agents editing this repository
+TASKS.md                            development roadmap
 ```
 
 ## Related

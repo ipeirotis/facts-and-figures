@@ -3,7 +3,7 @@ name: facts-and-figures
 description: Verify numbers reported in an academic manuscript against the repository's own analysis pipeline, regenerate a named figure from the same data with improved presentation, or run a new analysis explicitly specified by the author, such as a robustness check, baseline, or subgroup analysis. Use when the repository contains the author's analysis code and its data is reachable as the pipeline defines it, whether that data sits in the repository or in a source the pipeline is configured to read such as a warehouse table or bucket object, and the task requires reproducible computation with command-level provenance. Do not use for prose editing, literature searches, citation verification, or exploratory searches for favorable results.
 license: MIT
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   author: ipeirotis
   repo: https://github.com/ipeirotis/facts-and-figures
 ---
@@ -34,6 +34,8 @@ If the request does not identify the capability or target, ask one focused quest
 ## Gate the work
 
 Require the author's analysis code in the repository, its data reachable in this session as the pipeline itself defines it (a file in the tree, or a remote source the pipeline is already configured to read and this session can access), and a shell. Require write access for figure regeneration or a new analysis. If an input or tool is missing or unreachable, name it and stop; never estimate, reconstruct, substitute another source, or invent a result.
+
+When the gates pass and the session can write, create the run marker `facts-and-figures-out/.active` before the first command; it arms the write-boundary hook shipped in `hooks/`, and its removal is part of the teardown confirmed in Return.
 
 ## Load the manuscript context and scope the files
 
