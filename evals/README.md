@@ -63,9 +63,12 @@ never this directory, which contains the answer key.
 ## Honesty notes
 
 - Grading is keyword-based and coarse: it anchors on the manuscript's
-  value strings and checks the classification word nearby. A FAIL deserves
-  a human read of the report before it is believed. Exact grading arrives
-  with the machine-readable report (TASKS.md item 5).
+  value strings and checks the classification word nearby. Prose that
+  legitimately references another target's verdict on the same line
+  ("not as a match or mismatch", cross-value arithmetic) surfaces as WARN,
+  not FAIL. A FAIL deserves a human read of the report before it is
+  believed. Exact grading arrives with the machine-readable report
+  (TASKS.md item 5).
 - A PASS on the planted defects is meaningful despite that coarseness: a
   report that calls the transposed 6.23 a match, resolves the 12.5%
   boundary tie silently, or produces a value for the undistributed wave-2

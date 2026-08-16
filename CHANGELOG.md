@@ -14,6 +14,12 @@ Adds the eval suite (TASKS.md item 3). The skill's runtime files are unchanged; 
 - `evals/run_agent_eval.sh` and `evals/grade_report.py`, the agent layer: two scratch workspaces (fixture intact; dataset removed) with the skill and the write-boundary hook installed, run headless via the `claude` CLI and graded against `evals/expected.json`. Grading is keyword-based and documented as coarse until the machine-readable report (TASKS.md item 5) replaces it; the answer key never enters an eval workspace.
 - `.gitignore` covers the fixture pipeline's `results/` output.
 
+### Changed
+
+- The grader treats stray verdict words near an anchor as a warning rather than a failure. The first live run showed real reports legitimately putting another target's verdict on an anchor-bearing line ("reported as unverifiable, not as a match or mismatch"; the cross-value arithmetic `74.64 - 68.32 = 6.32` inside the mismatch explanation), so only a missing anchor or a missing expected verdict fails; extras print as `WARN` with a pointer to read the report. Line-level verdicts take precedence over context windows for the same reason: adjacent list rows must not bleed into each other.
+- `run_agent_eval.sh` saves each report outside its workspace. Piping through `tee` into the workspace pre-created an empty `report.md` that the agent under eval noticed and dutifully asked about.
+- Both live cases pass as of this release: the verification agent found all seven targets, called the transposed 6.23 a mismatch, disclosed the 12.5%-versus-13% boundary tie, classified the undistributed wave-2 value unverifiable, and checked `p < 0.001` as a predicate; the gated agent named the missing dataset, classified everything unverifiable, and declined to substitute unrelated credentials for the missing source.
+
 ## [0.3.0] - 2026-08-16
 
 Adds an execution form and a mechanical guard around the existing protocol without moving the protocol itself: `SKILL.md` and `references/` remain the single source of truth, and the new files point at them rather than restating them. Minor bump per the release rule — the run marker is a new observable step in the gate, and two new install surfaces exist.

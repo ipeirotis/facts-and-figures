@@ -3,7 +3,8 @@
 
 Keyword grading, and honestly coarse: for each target it finds report lines
 containing one of the target's anchor strings and checks that the expected
-classification word appears nearby without a conflicting one. It will be
+classification word appears nearby; stray verdict words from neighboring
+prose surface as WARN, not FAIL. It will be
 replaced by exact comparison once the skill emits a machine-readable report
 (TASKS.md item 5). A FAIL therefore deserves a human read of the report
 before it is believed; a PASS on the planted defects is meaningful, since a
@@ -74,11 +75,14 @@ def grade_targets(report, expected):
         elif t["expected"] not in asserted:
             print(f"FAIL  {t['id']}: expected '{t['expected']}', report asserts {sorted(asserted) or 'nothing'}")
             ok = False
-        elif asserted - {t["expected"]}:
-            print(f"FAIL  {t['id']}: report asserts conflicting classifications {sorted(asserted)}")
-            ok = False
         else:
             print(f"PASS  {t['id']}: classified {t['expected']}")
+            extras = asserted - {t["expected"]}
+            if extras:
+                # prose legitimately mentions other targets' verdicts on the
+                # same line ("not as a match or mismatch", cross-value
+                # arithmetic), so stray verdict words warn rather than fail
+                print(f"WARN  {t['id']}: other verdict words near an anchor {sorted(extras)}; confirm by reading the report")
         if t.get("boundary"):
             if BOUNDARY_RE.search(report):
                 print(f"PASS  {t['id']}: boundary case disclosed")

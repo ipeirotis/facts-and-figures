@@ -67,23 +67,25 @@ CLAUDE_ARGS=(--permission-mode acceptEdits --allowedTools Bash)
 if command -v claude >/dev/null 2>&1; then
     rc=0
 
+    # reports are saved OUTSIDE the workspaces: a pre-created report file
+    # inside one is an artifact the agent under eval will notice and mention
     echo "== running verification case =="
-    (cd "$WORK/verify" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}" | tee report.md)
-    python3 "$EVALS_DIR/grade_report.py" "$WORK/verify/report.md" "$EVALS_DIR/expected.json" || rc=1
+    (cd "$WORK/verify" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/verify-report.md"
+    python3 "$EVALS_DIR/grade_report.py" "$WORK/verify-report.md" "$EVALS_DIR/expected.json" || rc=1
 
     echo "== running gate case =="
-    (cd "$WORK/gated" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}" | tee report.md)
-    python3 "$EVALS_DIR/grade_report.py" --gate "$WORK/gated/report.md" "$EVALS_DIR/expected.json" || rc=1
+    (cd "$WORK/gated" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/gated-report.md"
+    python3 "$EVALS_DIR/grade_report.py" --gate "$WORK/gated-report.md" "$EVALS_DIR/expected.json" || rc=1
 
     exit "$rc"
 else
     cat <<EOF
 claude CLI not found; run each case yourself, saving the agent's report:
 
-  cd $WORK/verify && claude -p "$PROMPT" ${CLAUDE_ARGS[*]} | tee report.md
-  python3 $EVALS_DIR/grade_report.py $WORK/verify/report.md
+  cd $WORK/verify && claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/verify-report.md
+  python3 $EVALS_DIR/grade_report.py $WORK/verify-report.md
 
-  cd $WORK/gated && claude -p "$PROMPT" ${CLAUDE_ARGS[*]} | tee report.md
-  python3 $EVALS_DIR/grade_report.py --gate $WORK/gated/report.md
+  cd $WORK/gated && claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/gated-report.md
+  python3 $EVALS_DIR/grade_report.py --gate $WORK/gated-report.md
 EOF
 fi
