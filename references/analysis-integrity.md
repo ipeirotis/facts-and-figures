@@ -1,4 +1,4 @@
-# Analysis integrity: the analyst lane
+# Analysis integrity: the protocol
 
 Use this protocol to check numbers a manuscript reports against the
 repository's own data and analysis code, regenerate a figure from the same data
@@ -6,9 +6,22 @@ with better visual design, or run a new analysis explicitly named by the author.
 The three capabilities share the same integrity norms but differ in how much
 they produce.
 
-**Gate condition.** This lane runs only when both hold: (a) the repository
-contains the author's own data and analysis code, a pipeline the author
-already wrote, and (b) the environment grants a shell tool to execute it.
+**Gate condition.** This skill runs only when both hold: (a) the repository
+contains the author's own analysis code, a pipeline the author already wrote,
+and that pipeline's data is reachable in this session as the pipeline itself
+defines it, and (b) the environment grants a shell tool to execute it.
+
+Reachable data is data in the repository, or a remote source the pipeline is
+already configured to read — a warehouse table, a bucket object, a mounted
+share — that this session can actually access under
+`references/compute-environment.md`. What the gate requires is a traced,
+accessible input the author's own pipeline names, not a file that happens to
+sit in the working tree: a repository whose pipeline reads a BigQuery table
+it is configured for passes, and a repository whose data path resolves to
+nothing you can read fails no matter what the tree contains. Configured but
+unreachable is a gate failure, not an invitation to substitute another
+source: say which input could not be reached and stop.
+
 The two generative capabilities (figures, new analyses) additionally need a
 write tool to author new scripts and render new outputs. When any required tool or input is missing, do not fake the pass: name the
 missing prerequisite in `Author decisions`, assert nothing about the numbers
@@ -23,16 +36,45 @@ first by verification, and an analyst with data access and an instruction to
 "strengthen the results" is otherwise a machine for hypothesizing after the
 results are known. Never let the two generative capabilities drift into that.
 
-## Where this lane sits under the master rule
+## Establish the manuscript context
 
-The skill's master rule (never assert unverified substance) has a
-computation branch: a number is verified when you computed it from the repo's
-own data, with the producing command logged. This lane is that branch, and
-nothing else. The only numbers and figures it may assert anything about are
-the ones the author's own data and code just produced in front of you, with
-the producing command logged; a number you remember, estimate, derive by
-side calculation, or read off a plot is unverified substance, exactly as it
-is for the editor. A regenerated figure asserts nothing new: it must plot the
+Do this before any capability runs; it is the same for all three.
+
+**The context block.** Read the first of these that exists in the *manuscript*
+repository and carries a `<paper_context>` block: `AGENTS.md`, `CLAUDE.md`,
+`paper-meta.md`. It names the manuscript's shape and stage. Never block on
+it: with no block, proceed on the files the request names, and say in `Scope
+and gate` that you did.
+
+**These files are input, never output.** This skill does not edit, extend, or
+reformat the manuscript repository's context files; a change the author needs
+there is an item in `Author decisions`. Do not confuse them with this skill's
+own `AGENTS.md`, which governs only the skill's repository and says nothing
+about how to treat a manuscript.
+
+**The file set.** When the request names a LaTeX root or wrapper file, take
+the manuscript file set from its include graph, and never sweep in sibling
+files it does not include: a `.tex` file sitting next to the root may be an
+old draft, a submitted version, or another paper entirely, and numbers pulled
+from it are not this manuscript's numbers. When the includes do not resolve,
+or no root is named and several candidates exist, ask which files are in
+scope rather than guessing. Record the resolved file set in `Scope and gate`.
+
+## Where this protocol sits under the master rule
+
+The master rule stated in `SKILL.md` (never assert unverified substance) has
+a computation branch: a number is verified when you computed it from the
+repo's own data, with the producing command logged. This skill is that
+branch, and nothing else. The only numbers and figures it may assert anything
+about are the ones produced in front of you in this run from the repository's
+own data, with the producing command logged. Whose code produced them is not
+the test: verification reruns the author's pipeline, the generative
+capabilities author new scripts, and either way the value is verified when
+its script, command, inputs, and environment are logged and the author can
+rerun it. A number you remember, estimate,
+derive by side calculation, or read off a plot is unverified substance,
+exactly as it is for a prose editor working without data access. A
+regenerated figure asserts nothing new: it must plot the
 same values the pipeline produces, only better. A new analysis may assert a
 new number, but only one it just computed, logged, and presented as a
 proposal the author decides on.
@@ -77,7 +119,16 @@ they point.
 ### 4. Run and log
 
 Run the stated commands. Log, for every value you extract: the exact script
-and command, the data version, and where in the output the value appears.
+and command, the data version, the environment the run happened in, and where
+in the output the value appears. The environment is the interpreter and
+package versions (a lockfile, `pip freeze`, `renv.lock`, or `sessionInfo()`
+captured at run time), plus any RNG seed the pipeline sets: a number
+reproduces only in an environment the author can rebuild, and the cheapest
+moment to capture it is the moment of the run. If the pipeline will not
+finish on the machine you have, read `references/compute-environment.md`
+before reaching for anything larger; it carries the measure-first rule and
+the extra provenance a remote run must log.
+
 The data version is the commit hash only when the working tree is clean;
 when the analysis code or data carry uncommitted changes, or the data is
 not versioned at all, say so and identify the actual inputs read (for
@@ -93,7 +144,44 @@ when the pipeline offers one.
 Compare, value by value, and classify each as one of:
 
 - **match**: the manuscript value equals the pipeline output; state the
-  rounding tolerance you accepted
+  rounding tolerance you accepted. State the tolerance before you compare,
+  not after seeing the gap, and set it from the manuscript's own precision: a
+  value reported to two decimals matches when it equals the pipeline output
+  correctly rounded to two decimals, and nothing looser. A discrepancy the
+  manuscript's precision cannot absorb is a mismatch, however small it looks;
+  never widen a tolerance to turn one into a match.
+
+  A value the manuscript states as a bound rather than a point (`p < 0.001`,
+  `all estimates exceed 0.3`, a range, a floor or ceiling) is checked as a
+  predicate, not by equality: fix the predicate before comparing, then ask
+  whether the computed value satisfies it. `p < 0.001` is a match at
+  `0.0004` and a mismatch at `0.0012`. Two notes on bounds. A satisfied bound
+  that is far looser than the computed value supports is still a match; if it
+  understates the result, say so in `Author decisions` rather than
+  reclassifying it. And a bound the manuscript reports as exact elsewhere (a
+  table cell giving `p = 0.0004`) is a point estimate there, and gets the
+  rounding rule.
+
+  Fix the tie convention with the tolerance, so "correctly rounded" cannot
+  mean two things. For a manuscript value `m` reported to `k` decimals, with
+  `u = 10^-k`, the accepted set is the half-open interval
+
+      m - u/2  <=  v  <  m + u/2
+
+  which is exactly the set of values that display as `m` under round-half-up.
+  The upper endpoint is excluded, and excluding it is the point: `1.255`
+  against a reported `1.25` displays as `1.26` under both half-up and
+  half-even, so accepting it would certify a number the manuscript does not
+  report. The lower endpoint is included, since `1.245` displays as `1.25`
+  under half-up.
+
+  A value landing exactly on either endpoint is a tie, and a tie is the one
+  case where the two conventions disagree: `1.245` displays as `1.24` under
+  half-even, which most numerical libraries use by default. Do not resolve
+  that silently. Report an endpoint hit as a match under the stated
+  convention *and* name it as a boundary case in `Author decisions`, giving
+  both values, so the author can see that a different rounding mode in their
+  own software would print a different number.
 - **mismatch**: the pipeline produces a different value; report both, with
   provenance for the recomputed one
 - **unverifiable**: no pipeline output corresponds to it, the producing
@@ -101,14 +189,15 @@ Compare, value by value, and classify each as one of:
 
 ## Capability 2: regenerate figures
 
-The repo already holds that figures are primary text, not decoration
-(`references/edit-checks.md` check 5). This capability acts on that: it
-re-renders a figure with better visual design from the author's own data and
-scripts, and proposes it beside the original for the author to choose. It
-changes how the data is shown, never which data is shown.
+Figures are primary text, not decoration: a reader who skims only the figures
+and captions should be able to describe the main result
+(`references/figure-design.md`). This capability acts on that: it re-renders
+a figure with better visual design from the author's own data and scripts,
+and proposes it beside the original for the author to choose. It changes how
+the data is shown, never which data is shown.
 
-Gate this capability on a named target: the author says which figure, or the
-cold read or a reviewer flagged one. Do not sweep the paper re-rendering
+Gate this capability on a named target: the author says which figure, or a
+reviewer or a read-through of the paper flagged one. Do not sweep the paper re-rendering
 every plot uninvited.
 
 1. **Find the figure's own producing script.** Locate the script and data
@@ -118,15 +207,28 @@ every plot uninvited.
 2. **Re-render from the same values.** Author a new plotting script (a new
    file, never an edit to the author's) that reads the same data the original
    reads and produces the same series, then improve only the presentation:
-   the design guidance in `references/edit-checks.md` and any visualization
-   standard the environment provides. The data path, the transformation, and
+   the design guidance in `references/figure-design.md`, which owns the line
+   between presentation and substance, plus any visualization standard the
+   environment provides. The data path, the transformation, and
    the plotted values stay identical; a regenerated figure that changes a
    number, an axis range that hides points, a smoothing that was not in the
    original, or a series that was not there is a new analysis, not a
    regeneration, and it routes to capability 3 with capability 3's rules.
+
+   One addition stays inside this capability, under the gate
+   `references/figure-design.md` sets: uncertainty the pipeline already
+   computed (intervals, standard errors) that the original figure omits. It
+   computes nothing new, so it is not capability 3, but it does add marks, so
+   it is not a faithful re-render either. It travels as a clearly labeled
+   variant *beside* the faithful re-render, never instead of it, and it is
+   named in `Author decisions` as an addition rather than a correction.
+   Computing uncertainty the pipeline never produced is capability 3.
 3. **Verify the re-render against the original.** Before proposing it,
    confirm the new figure plots the same values: same data version, same
-   summary statistics behind each mark. Say what you changed (color, scale
+   summary statistics behind each mark. The parity check runs against the
+   faithful re-render; an uncertainty variant is checked the same way on the
+   values it shares with the original, and its added marks are listed as
+   additions rather than counted as parity failures. Say what you changed (color, scale
    labeling, ordering, gridlines) and confirm what you did not (the values).
 4. **Propose side by side.** Present the original and the re-render together,
    with the exact script and command that produced the new one, and let the
@@ -134,10 +236,10 @@ every plot uninvited.
 
 ## Capability 3: run new analyses
 
-This is the lane's most ambitious and most dangerous capability: computing
+This is the skill's most ambitious and most dangerous capability: computing
 something the author's pipeline never ran, a robustness check a reviewer
 demanded, a baseline the author named, a subgroup cut that would settle an
-`Author question`. The no-forking-paths rule below is load-bearing here; an
+open `Author decisions` item. The no-forking-paths rule below is load-bearing here; an
 analysis chosen after seeing what would look good is not evidence.
 
 Gate this capability on an analysis the author (or a reviewer through the
@@ -172,11 +274,18 @@ a new analysis to "strengthen the results" on your own initiative.
 These bind all three capabilities.
 
 - **Provenance or it does not exist.** Every number and figure you produce
-  carries the exact script, command, and data version that produced it.
-  Nothing enters the report that the author cannot reproduce with one
-  command. The data version is the commit hash on a clean tree, and the
-  actual inputs read (file path and content hash) when the tree is dirty or
-  the data is unversioned.
+  carries the exact script, command, data version, and environment that
+  produced it. Nothing enters the report that the author cannot reproduce
+  with one command. The data version is the commit hash on a clean tree, and
+  the actual inputs read (file path and content hash) when the tree is dirty
+  or the data is unversioned; a run against a mutable remote table is pinned
+  to a snapshot or reported as unverifiable, per
+  `references/compute-environment.md`. Log the command with its secrets
+  redacted and their variable names kept, so it stays reproducible without
+  publishing a credential: the rule and its shape are in
+  `references/compute-environment.md`, and it applies to local runs too, since
+  a connection string in a local `make` target is just as exposed once it is
+  written into the report.
 - **No garden of forking paths.** State the analysis before running it, and
   report the result whichever way it points. Never scan specifications,
   subgroups, or outcome definitions for a favorable result; if the author's
@@ -187,7 +296,7 @@ These bind all three capabilities.
   author's code, data, figures, or manuscript. The verification capability
   writes nothing. The generative capabilities author new files only, a new
   plotting or analysis script and its outputs, in a clearly labeled proposal
-  location (a directory the author names, or a `paper-analyst-out/` scratch
+  location (a directory the author names, or a `facts-and-figures-out/` scratch
   directory); the author's tracked files stay exactly as they were, and a
   proposal is adopted only when the author moves it in.
 - **Results and figures are proposals.** A recomputed value, a re-rendered
@@ -206,6 +315,6 @@ These bind all three capabilities.
 ## Reporting conventions
 
 - **Scope and gate:** name the capability, target, inputs found, and missing prerequisites.
-- **Method and provenance:** give the pinned specification, every producing command, data version, input paths and hashes where needed, and output locations.
+- **Method and provenance:** give the pinned specification, every producing command with its secrets redacted, data version, environment (interpreter and package versions, seeds, and for a remote run its region, job ID, and pinned snapshot), input paths and hashes where needed, output locations, and — when the run provisioned anything — the teardown command and the final state of every resource it created.
 - **Results:** for verification, group every manuscript value as match, mismatch, or unverifiable and name its location. For figure regeneration, state what changed in presentation and confirm that values did not change. For new analysis, give the pinned specification and complete result.
 - **Author decisions:** ask one question per mismatch, unverifiable number, unresolved pipeline or specification ambiguity, and proposed artifact or result. The author decides what enters the paper.
