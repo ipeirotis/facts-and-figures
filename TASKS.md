@@ -34,17 +34,24 @@ when its definition of done holds, not when code for it exists.
   excludes web access, and its body survives the `AGENTS.md` invariant that
   wrappers point rather than restate.
 
-## Open
+## v0.4.0
 
-- [ ] **3. Eval suite.** A fixture paper repository with a known-good
-  pipeline, one deliberately wrong manuscript number, one rounding case on
-  the tie boundary, and one value whose data source is unreachable —
-  exercising match, mismatch, the tie convention, unverifiable, and the
-  gate. `AGENTS.md` already requires every rule to be checkable by reading
-  the output; the evals turn that requirement into a harness, and settle
-  empirically whether the subagent form follows the protocol better than the
-  inline form. *Done when:* the fixture and expected classifications live
-  under `evals/` and a documented command runs the comparison.
+- [x] **3. Eval suite.** `evals/` holds a synthetic fixture paper repository
+  (`fixtures/toy-paper/`: manuscript, 40-row dataset, deterministic
+  stdlib-only pipeline) whose numbers are planted to exercise every
+  classification the protocol defines: three clean matches, a transposed
+  mismatch, an exact lower-endpoint rounding tie (pipeline 12.5% against a
+  reported 13%), an unverifiable value whose source file is not
+  distributed, a `p < 0.001` bound checked as a predicate, and a gate case
+  with the dataset removed. Two layers: `check_fixture.py` (deterministic,
+  no LLM, CI-safe — asserts the pipeline reproduces the documented values
+  and that each expected classification follows from the protocol's own
+  tolerance rule) and `run_agent_eval.sh` (headless Claude Code against
+  scratch workspaces, graded by `grade_report.py`; keyword grading until
+  item 5's machine-readable report). `expected.json` is the answer key and
+  never enters an eval workspace.
+
+## Open
 
 - [ ] **4. Plugin packaging.** Bundle skill + agent + hook as a Claude Code
   plugin so the three install as one versioned unit and the hook registers

@@ -1,0 +1,111 @@
+{
+  "fixture": "fixtures/toy-paper",
+  "pipeline_command": "python3 analysis/run_analysis.py",
+  "results_file": "results/results.json",
+  "targets": [
+    {
+      "id": "overall-mean",
+      "location": "manuscript.md, Data",
+      "manuscript_value": 71.48,
+      "decimals": 2,
+      "unit": "score points",
+      "result_key": "overall_mean_quality",
+      "true_value": 71.4825,
+      "kind": "point",
+      "expected": "match",
+      "boundary": false,
+      "anchors": ["71.48"]
+    },
+    {
+      "id": "mean-experienced",
+      "location": "manuscript.md, Results",
+      "manuscript_value": 74.64,
+      "decimals": 2,
+      "unit": "score points",
+      "result_key": "mean_quality_experienced",
+      "true_value": 74.6425,
+      "kind": "point",
+      "expected": "match",
+      "boundary": false,
+      "anchors": ["74.64"]
+    },
+    {
+      "id": "mean-inexperienced",
+      "location": "manuscript.md, Results",
+      "manuscript_value": 68.32,
+      "decimals": 2,
+      "unit": "score points",
+      "result_key": "mean_quality_inexperienced",
+      "true_value": 68.3225,
+      "kind": "point",
+      "expected": "match",
+      "boundary": false,
+      "anchors": ["68.32"]
+    },
+    {
+      "id": "diff-of-means",
+      "location": "manuscript.md, Abstract and Results",
+      "manuscript_value": 6.23,
+      "decimals": 2,
+      "unit": "score points",
+      "result_key": "diff_experienced_minus_inexperienced",
+      "true_value": 6.32,
+      "kind": "point",
+      "expected": "mismatch",
+      "boundary": false,
+      "anchors": ["6.23"],
+      "note": "planted digit transposition; the group means the manuscript itself reports imply 6.32"
+    },
+    {
+      "id": "flagged-share",
+      "location": "manuscript.md, Data",
+      "manuscript_value": 13,
+      "decimals": 0,
+      "unit": "percent",
+      "result_key": "flagged_share",
+      "result_scale": 100,
+      "true_value": 12.5,
+      "kind": "point",
+      "expected": "match",
+      "boundary": true,
+      "anchors": ["13%", "13 percent", "flagged"],
+      "note": "exact lower-endpoint tie: 12.5 displays as 13 under half-up and as 12 under half-even; the protocol requires naming it a boundary case in Author decisions"
+    },
+    {
+      "id": "wave2-retention",
+      "location": "manuscript.md, Results",
+      "manuscript_value": 64,
+      "decimals": 0,
+      "unit": "percent",
+      "result_key": "retention_wave2",
+      "true_value": null,
+      "kind": "missing-source",
+      "expected": "unverifiable",
+      "boundary": false,
+      "anchors": ["64%", "64 percent", "retention"],
+      "note": "data/wave2_followup.csv is not distributed; no substitute source is acceptable"
+    },
+    {
+      "id": "perm-p",
+      "location": "manuscript.md, Abstract and Results",
+      "manuscript_value": "p < 0.001",
+      "unit": "probability",
+      "result_key": "perm_p_value",
+      "true_value": 9.999000099990002e-05,
+      "kind": "predicate",
+      "predicate": "less_than",
+      "predicate_value": 0.001,
+      "expected": "match",
+      "boundary": false,
+      "anchors": ["0.001", "permutation", "p-value", "p value"],
+      "note": "a bound is checked as a predicate fixed before comparison, not by equality"
+    }
+  ],
+  "gate_case": {
+    "remove": ["data/workers.csv"],
+    "pipeline_exit_nonzero": true,
+    "report_must_name": ["workers.csv"],
+    "report_must_contain_any": ["not found", "missing", "unreachable", "gate"],
+    "note": "with the dataset removed, the run must name the unreachable input and stop; no manuscript value may be classified"
+  }
+}

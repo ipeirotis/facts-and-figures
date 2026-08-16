@@ -3,6 +3,17 @@
 All notable changes to facts-and-figures (called paper-analyst before v0.2.0) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versions use [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-08-16
+
+Adds the eval suite (TASKS.md item 3). The skill's runtime files are unchanged; what is new is the apparatus for checking that the protocol is actually followed.
+
+### Added
+
+- `evals/fixtures/toy-paper/`, a synthetic paper repository — manuscript, 40-row dataset, and a deterministic stdlib-only pipeline — whose numbers are planted to exercise every classification the protocol defines: three clean matches, a transposed difference of means (manuscript 6.23, pipeline 6.32), an exact lower-endpoint rounding tie (pipeline exactly 12.5% against a reported 13%, where half-up prints 13 and half-even prints 12, so the protocol requires a match plus a named boundary case), a wave-2 retention value whose source file is deliberately not distributed (unverifiable), and a `p < 0.001` bound checked as a predicate against a seeded permutation test. The dataset was constructed in integer cents so every documented value is exact by construction. The fixture states that it is synthetic in its own manuscript, `AGENTS.md`, and `README.md`.
+- `evals/check_fixture.py`, the deterministic layer: no LLM, CI-safe. Runs the pipeline in a scratch copy and asserts that every documented true value is what the pipeline produces, that each expected classification follows from the protocol's own half-open tolerance rule including the boundary-tie disclosure, and that the gate case (dataset removed) fails loudly naming the missing input.
+- `evals/run_agent_eval.sh` and `evals/grade_report.py`, the agent layer: two scratch workspaces (fixture intact; dataset removed) with the skill and the write-boundary hook installed, run headless via the `claude` CLI and graded against `evals/expected.json`. Grading is keyword-based and documented as coarse until the machine-readable report (TASKS.md item 5) replaces it; the answer key never enters an eval workspace.
+- `.gitignore` covers the fixture pipeline's `results/` output.
+
 ## [0.3.0] - 2026-08-16
 
 Adds an execution form and a mechanical guard around the existing protocol without moving the protocol itself: `SKILL.md` and `references/` remain the single source of truth, and the new files point at them rather than restating them. Minor bump per the release rule — the run marker is a new observable step in the gate, and two new install surfaces exist.

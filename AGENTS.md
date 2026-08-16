@@ -52,6 +52,9 @@ agents/claude-code/facts-and-figures.md   subagent wrapper: loads SKILL.md,
 agents/openai.yaml                  display metadata for non-Claude agent hosts
 hooks/write-boundary.sh             PreToolUse guard, armed by the run marker
                                     facts-and-figures-out/.active
+evals/                              eval suite: synthetic fixture paper repo,
+                                    answer key, deterministic fixture check,
+                                    agent-in-the-loop runner and grader
 TASKS.md                            development roadmap and definitions of done
 ```
 

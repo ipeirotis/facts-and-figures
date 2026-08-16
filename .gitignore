@@ -1,2 +1,4 @@
 # Proposal outputs the skill authors during a run; never part of the skill.
 facts-and-figures-out/
+# Output of the eval fixture's pipeline; regenerated on every check.
+evals/fixtures/toy-paper/results/

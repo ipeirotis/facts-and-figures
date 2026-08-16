@@ -72,9 +72,24 @@ references/compute-environment.md   local-first execution and cloud provenance
 agents/claude-code/facts-and-figures.md   subagent wrapper for isolated runs
 agents/openai.yaml                  display metadata for non-Claude agent hosts
 hooks/write-boundary.sh             optional PreToolUse guard for the write boundary
+evals/                              eval suite: fixture paper repo, answer key, graders
 AGENTS.md                           guidance for agents editing this repository
 TASKS.md                            development roadmap
 ```
+
+## Evals
+
+`evals/` tests the skill against a synthetic paper repository with planted
+defects: a transposed number, an exact rounding-boundary tie, a value whose
+data source is not distributed, and a gate case with the dataset removed.
+Two commands:
+
+```bash
+python3 evals/check_fixture.py    # deterministic, no LLM: fixture self-check
+evals/run_agent_eval.sh           # headless Claude Code against the fixture, graded
+```
+
+See `evals/README.md` for the target table and grading caveats.
 
 ## Related
 
