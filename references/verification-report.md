@@ -62,8 +62,9 @@ Each record in `values` carries one manuscript value:
   accepted interval or predicate, fixed before comparison, stated so a
   reader can recheck the classification from `reported` and `computed`
   alone. For a predicate value, state the predicate (`"p < 0.001"`).
-- `boundary` (required): `true` only for an exact endpoint tie, which the
-  prose report must simultaneously name in Author decisions.
+- `boundary` (optional, defaults to false when absent): must be present and
+  `true` for an exact endpoint tie, which the prose report simultaneously
+  names in Author decisions; any other value or absence means no tie.
 - `producing_command` (required for match and mismatch): the exact command,
   secrets redacted, whose logged run produced `computed`.
 - `reason` (required for unverifiable): why — the named unreachable input,

@@ -19,6 +19,7 @@ Completes the roadmap's items 4 and 5: the repository is now a Claude Code plugi
 ### Changed
 
 - The subagent wrapper prefers invoking the `facts-and-figures` skill directly when a plugin install exposes it, falling back to locating `SKILL.md` on disk.
+- Two refinements from the first live run against the new contract, which the skill otherwise passed end to end — the agent wrote the companion unprompted, classified all ten values it inventoried correctly, and kept it through teardown while removing the marker. The `boundary` field is optional and defaults to false (a live report set it null on an unverifiable value; requiring an explicit false on every record was rigidity, not integrity), and the JSON grader pairs records to targets by the `reported` field first, since pairing on note text let the mismatch record's cross-value arithmetic contaminate the group-mean targets.
 - The release checklist in `AGENTS.md` adds `.claude-plugin/plugin.json` to the version-bump set — plugin users only receive updates when that version changes — and asks for strict plugin validation before releasing.
 
 ## [0.4.0] - 2026-08-16

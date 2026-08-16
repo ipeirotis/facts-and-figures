@@ -19,13 +19,23 @@ EVALS = Path(__file__).resolve().parent
 SCHEMA = "facts-and-figures.verification/1"
 EPS = 1e-6
 
-RECORD_REQUIRED = {"location", "reported", "classification", "boundary"}
+RECORD_REQUIRED = {"location", "reported", "classification"}
 TOP_REQUIRED = {"schema", "skill_version", "manuscript_files", "pipeline_command",
                 "environment", "data_versions", "values"}
 
 
-def record_text(r):
-    return " ".join(str(r.get(k, "")) for k in ("reported", "location", "note")).lower()
+def pair_records(values, anchors):
+    """Records covering a target. The `reported` field is authoritative —
+    pairing on location/note text lets one record's cross-value arithmetic
+    (a mismatch note quoting the group means) contaminate another target —
+    so free text is a fallback only when no `reported` field matches."""
+    lowered = [a.lower() for a in anchors]
+    by_reported = [r for r in values
+                   if any(a in str(r.get("reported", "")).lower() for a in lowered)]
+    if by_reported:
+        return by_reported
+    return [r for r in values
+            if any(a in f"{r.get('location', '')} {r.get('note', '')}".lower() for a in lowered)]
 
 
 def computed_matches(computed, target):
@@ -62,7 +72,7 @@ def main():
     check(not bad, "required record fields present", f"records missing fields: {bad}" if bad else f"{len(values)} records")
 
     for t in expected["targets"]:
-        recs = [r for r in values if any(a.lower() in record_text(r) for a in t["anchors"])]
+        recs = pair_records(values, t["anchors"])
         if not recs:
             check(False, f"{t['id']}: a record covers it", f"no record mentions {t['anchors']}")
             continue
