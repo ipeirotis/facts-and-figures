@@ -3,6 +3,12 @@
 All notable changes to facts-and-figures (called paper-analyst before v0.2.0) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versions use [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] - 2026-10-05
+
+### Fixed
+
+- The rounding-tolerance interval in verification step 5 of `references/analysis-integrity.md` is now stated on magnitudes, with round-half-up defined as half away from zero (Python's `decimal.ROUND_HALF_UP`). The old interval `m - u/2 <= v < m + u/2` put the inclusive and exclusive endpoints on the wrong side for negative values: against a reported `-1.25` it accepted `-1.255`, which displays as `-1.26`, and rejected `-1.245`, which displays as `-1.25`.
+
 ## [0.2.0] - 2026-08-15
 
 Makes the skill self-contained. Extracted from `blue-pencil`, it carried citations to reference files that did not come with it: figure regeneration pointed at `blue-pencil`'s `edit-checks.md` for its design guidance, and the protocol appealed to a master rule the standalone `SKILL.md` never stated. Both are now resolved inside this repository, and the skill gains the two things the extraction dropped that it actually needed: the manuscript-context step and an explicit account of where the analysis runs.
