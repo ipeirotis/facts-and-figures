@@ -164,16 +164,20 @@ Compare, value by value, and classify each as one of:
 
   Fix the tie convention with the tolerance, so "correctly rounded" cannot
   mean two things. For a manuscript value `m` reported to `k` decimals, with
-  `u = 10^-k`, the accepted set is the half-open interval
+  `u = 10^-k`, the accepted set is the half-open interval on magnitudes
 
-      m - u/2  <=  v  <  m + u/2
+      |m| - u/2  <=  |v|  <  |m| + u/2,   with v of the same sign as m
 
-  which is exactly the set of values that display as `m` under round-half-up.
-  The upper endpoint is excluded, and excluding it is the point: `1.255`
+  (for `m = 0`, simply `|v| < u/2`), which is exactly the set of values that
+  display as `m` under round-half-up, where a half rounds away from zero
+  (Python's `decimal.ROUND_HALF_UP`). Working on magnitudes keeps negative
+  values right: against a reported `-1.25`, `-1.255` displays as `-1.26` and
+  is rejected, while `-1.245` displays as `-1.25` and is accepted. The upper
+  magnitude endpoint is excluded, and excluding it is the point: `1.255`
   against a reported `1.25` displays as `1.26` under both half-up and
   half-even, so accepting it would certify a number the manuscript does not
-  report. The lower endpoint is included, since `1.245` displays as `1.25`
-  under half-up.
+  report. The lower magnitude endpoint is included, since `1.245` displays as
+  `1.25` under half-up.
 
   A value landing exactly on either endpoint is a tie, and a tie is the one
   case where the two conventions disagree: `1.245` displays as `1.24` under
