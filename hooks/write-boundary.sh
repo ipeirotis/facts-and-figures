@@ -93,7 +93,10 @@ for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
         continue
     scratch_roots.append(root)
 
-if resolved == os.path.realpath(marker) or lexical == marker:
+if lexical == marker and not os.path.islink(marker):
+    # lifecycle writes to the marker itself are allowed — but only when it
+    # is a regular file: a marker replaced by a symlink to an author file
+    # would otherwise be overwritten through this very exemption
     sys.exit(0)
 
 if under(lexical, project):

@@ -125,6 +125,14 @@ def grade_top_level(g, report, expected):
            if any(not str(r.get(k) or "").strip() for k in RECORD_REQUIRED)]
     g.check(not bad, "required record fields present and non-empty",
             f"records with missing or empty fields: {bad}" if bad else f"{len(values)} records")
+    # a location must at least name a place in the manuscript — a filler
+    # string cannot support the promised value-by-value review
+    place_tokens = ("manuscript", "abstract", "data", "results", "method",
+                    "table", "figure", "scope", "author")
+    bad_locs = [r.get("location") for r in values
+                if not any(tok in str(r.get("location", "")).lower() for tok in place_tokens)]
+    g.check(not bad_locs, "record locations identify a manuscript place",
+            f"unusable locations: {bad_locs[:3]}" if bad_locs else "")
     return values
 
 

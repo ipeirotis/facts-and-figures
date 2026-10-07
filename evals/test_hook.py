@@ -66,6 +66,7 @@ def main():
         # project outside /tmp — the ordinary case
         proj = Path(home_base) / "paper"
         (proj / "facts-and-figures-out").mkdir(parents=True)
+        (proj / "manuscript.md").write_text("# Title\n")
 
         check("no marker: outside write allowed",
               write_payload(proj, proj / "manuscript.md"), proj, want_deny=False)
@@ -102,6 +103,16 @@ def main():
               write_payload(proj, proj / "facts-and-figures-out" / "escape"), proj,
               want_deny=True)
         (proj / "facts-and-figures-out" / "escape").unlink()
+
+        # the marker exemption must not apply when the marker itself is a
+        # symlink to an author file
+        marker_path = proj / "facts-and-figures-out" / ".active"
+        marker_path.unlink()
+        marker_path.symlink_to(proj / "manuscript.md")
+        check("symlinked marker: write to the marker path denied",
+              write_payload(proj, marker_path), proj, want_deny=True)
+        marker_path.unlink()
+        marker_path.touch()
 
         # a proposal override that contains the project must not whitelist it
         marker = proj / "facts-and-figures-out" / ".active"
