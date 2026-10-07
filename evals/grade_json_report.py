@@ -309,6 +309,15 @@ def grade_targets(report, expected):
             g.check(all("computed" in r and r["computed"] is None for r in recs),
                     f"{t['id']}: computed explicitly null")
             g.check(all(r.get("reason") for r in recs), f"{t['id']}: reason on every record")
+            # the same rejection the gate grader applies: a reason that
+            # DENIES the absence or credits the run with success
+            # contradicts the unverifiable classification it sits on,
+            # whichever file it also names
+            denying = [str(r.get("reason"))[:60] for r in recs
+                       if NEG_ABSENCE_RE.search(str(r.get("reason", "")).lower())
+                       or GATE_SUCCESS_RE.search(str(r.get("reason", "")).lower())]
+            g.check(not denying, f"{t['id']}: no reason denies the absence",
+                    f"reasons: {denying}" if denying else "")
             must = t.get("reason_must_contain", "")
             g.check(all(must.lower() in str(r.get("reason", "")).lower() for r in recs),
                     f"{t['id']}: reason names the missing source",

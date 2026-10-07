@@ -184,6 +184,13 @@ MUTATIONS = [
     ("permutation p-value off by one percent", [], "mock_good.json",
      lambda d: [r.update(computed=0.00010089990009990002) for r in d["values"]
                 if r.get("reported") == "p < 0.001"], 1),
+    # a missing-source reason denying the absence names the file while
+    # contradicting the unverifiable classification it sits on
+    ("missing-source reason claiming presence", [], "mock_good.json",
+     lambda d: [r.update(reason="data/wave2_followup.csv is present and "
+                                "verified; it is not missing")
+                for r in d["values"]
+                if r.get("classification") == "unverifiable"], 1),
 ]
 
 

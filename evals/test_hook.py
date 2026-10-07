@@ -53,6 +53,10 @@ def check(label, payload, project, want_deny, extra_env=None):
     print(f"{'PASS' if ok else 'FAIL'}  {label}"
           + ("" if ok else f"  (exit {proc.returncode}, denied={denied}, want deny={want_deny})"))
     if not ok:
+        # the decision reason says WHICH rule fired — without it a
+        # wrong deny is indistinguishable from the expected one
+        if proc.stdout.strip():
+            print(f"      hook output: {proc.stdout.strip()[:300]}")
         failures += 1
 
 
@@ -371,6 +375,55 @@ def main():
               write_payload(wproj / "analysis",
                             wproj / "facts-and-figures-out" / "s2.py"), oproj,
               want_deny=False)
+
+        # the inverse nesting: a planted ANCESTOR marker naming the
+        # checkout as its proposal would whitelist the whole checkout —
+        # the checkout is a candidate root, so safe_root rejects it and
+        # the ambiguity fails closed
+        anc = Path(home_base) / "anc"
+        (anc / "facts-and-figures-out").mkdir(parents=True)
+        (anc / "facts-and-figures-out" / ".active").write_text("paper2\n")
+        p2 = anc / "paper2"
+        (p2 / "facts-and-figures-out").mkdir(parents=True)
+        (p2 / "facts-and-figures-out" / ".active").touch()
+        (p2 / "manuscript.md").write_text("# Title\n")
+        check("ancestor marker naming the checkout: manuscript write denied",
+              write_payload(p2, p2 / "manuscript.md"), p2, want_deny=True)
+        check("ancestor marker naming the checkout: checkout-wide writes denied",
+              write_payload(p2, p2 / "notes.md"), p2, want_deny=True)
+
+        # bootstrap from a nested git repository: the worktree root above
+        # it must stay a candidate, or its symlinked default directory
+        # escapes the bootstrap validation
+        w4 = Path(home_base) / "wt4"
+        (w4 / "vendor" / "lib").mkdir(parents=True)
+        (w4 / "vendor" / "lib" / ".git").mkdir()
+        (w4 / ".git").write_text("gitdir: elsewhere\n")
+        (w4 / "data").mkdir()
+        (w4 / "facts-and-figures-out").symlink_to(w4 / "data")
+        check("nested-repo bootstrap, symlinked worktree root: marker write denied",
+              write_payload(w4 / "vendor" / "lib",
+                            w4 / "facts-and-figures-out" / ".active"), o2,
+              want_deny=True)
+        check("nested-repo bootstrap, symlinked worktree root: resolved spelling denied",
+              write_payload(w4 / "vendor" / "lib", w4 / "data" / ".active"), o2,
+              want_deny=True)
+
+        # a bootstrap marker naming an existing, non-empty directory
+        # would hand pre-existing author content to the allowance
+        p8 = Path(home_base) / "paper8"
+        (p8 / "data").mkdir(parents=True)
+        (p8 / "data" / "workers.csv").write_text("id\n1\n")
+        (p8 / "empty-out").mkdir()
+        check("bootstrap marker naming the data directory: denied",
+              write_payload(p8, p8 / "facts-and-figures-out" / ".active",
+                            content="data\n"), p8, want_deny=True)
+        check("bootstrap marker naming a fresh directory: allowed",
+              write_payload(p8, p8 / "facts-and-figures-out" / ".active",
+                            content="fresh-out\n"), p8, want_deny=False)
+        check("bootstrap marker naming an empty directory: allowed",
+              write_payload(p8, p8 / "facts-and-figures-out" / ".active",
+                            content="empty-out\n"), p8, want_deny=False)
 
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)

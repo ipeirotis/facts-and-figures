@@ -50,27 +50,23 @@ if tool not in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
 # a candidate may be a subdirectory rather than a root: the payload cwd
 # follows the session into any directory it changes into, and judging
 # the marker against <root>/analysis/facts-and-figures-out would read an
-# armed tree as unarmed. Ascend to the OUTERMOST ancestor holding a
-# marker, falling back to the nearest holding a .git entry (a linked
-# worktree carries .git as a file), and keep the path as given with
-# neither anywhere above. Any marker outranks a nearer .git — a nested
-# repository or submodule inside an armed project must not cut the
-# ascent short of the marker that governs it — and the outermost marker
-# outranks a nearer one: a stale or planted marker in a subdirectory,
-# naming ../data as its proposal line, would otherwise shadow the real
-# marker above and re-aim the allowance at the author data directory
-def rootof(p):
+# armed tree as unarmed. EVERY ancestor holding a marker or a .git
+# entry (a linked worktree carries .git as a file) is a candidate root:
+# keeping only the nearest .git misses the worktree above a nested
+# repository during bootstrap, and electing a single marker — nearest
+# or outermost — is gameable from whichever side was not elected, so
+# all of them are collected and the ambiguity resolves fail-closed in
+# the selection and safe_root rules below
+def roots_above(p):
+    out = []
     cur = p
-    top = ""
-    git = ""
     while True:
-        if os.path.lexists(os.path.join(cur, "facts-and-figures-out", ".active")):
-            top = cur
-        if not git and os.path.lexists(os.path.join(cur, ".git")):
-            git = cur
+        if (os.path.lexists(os.path.join(cur, "facts-and-figures-out", ".active"))
+                or os.path.lexists(os.path.join(cur, ".git"))):
+            out.append(cur)
         nxt = os.path.dirname(cur)
         if nxt == cur:
-            return top or git or p
+            return out
         cur = nxt
 
 
@@ -79,19 +75,20 @@ def rootof(p):
 # while the session works in — and creates its marker in — the worktree
 # the payload cwd names; judging only the original root would leave the
 # worktree manuscript unguarded. Each path is kept alongside its
-# ascended root rather than replaced by it: a project that is not a git
-# repository must not lose its own candidacy to a .git-bearing ancestor
+# ascended roots rather than replaced by them: a project that is not a
+# git repository must not lose its own candidacy to a .git-bearing
+# ancestor
 candidates = []
 for c in (os.environ.get("CLAUDE_PROJECT_DIR") or "", payload.get("cwd") or ""):
     if not c:
         continue
     c = os.path.realpath(c)
-    for cand in (c, rootof(c)):
+    for cand in [c] + roots_above(c):
         if cand not in candidates:
             candidates.append(cand)
 if not candidates:
     c = os.path.realpath(os.getcwd())
-    for cand in (c, rootof(c)):
+    for cand in [c] + roots_above(c):
         if cand not in candidates:
             candidates.append(cand)
 # with runs armed concurrently in separate checkouts (the documented
@@ -163,6 +160,32 @@ if not os.path.lexists(marker):
                 "the run marker there would land outside the proposal directory. "
                 "Replace facts-and-figures-out with a real directory first.".format(m=cm)
             )
+    # the bootstrap write may name a custom proposal directory as its
+    # first line. A name pointing at an EXISTING, NON-EMPTY directory
+    # would hand pre-existing author content (data/, analysis/) to the
+    # write allowance, so it is refused at creation: the proposal
+    # directory starts fresh
+    for c in candidates:
+        cm = os.path.join(c, "facts-and-figures-out", ".active")
+        if lexical != cm or os.path.realpath(cm) != cm:
+            continue
+        lines = str(tool_input.get("content") or "").splitlines()
+        line = lines[0].strip() if lines else ""
+        if not line or "\x00" in line or len(line) > 4096:
+            continue
+        named_dir = os.path.realpath(os.path.normpath(os.path.join(c, line)))
+        try:
+            occupied = os.path.isdir(named_dir) and bool(os.listdir(named_dir))
+        except OSError:
+            occupied = False
+        if occupied:
+            deny(
+                "facts-and-figures write boundary: this marker names {d} as the "
+                "proposal directory, but that directory already exists and is not "
+                "empty. The proposal directory holds only generated work and starts "
+                "fresh: name a new or empty directory (or use the default), never an "
+                "existing data, code, or figure directory.".format(d=named_dir)
+            )
     sys.exit(0)
 
 try:
@@ -204,10 +227,14 @@ def multi_linked(path):
     return stat.S_ISREG(st.st_mode) and st.st_nlink > 1
 
 
-# a directory is a safe allowance only if it neither equals nor contains
-# the project, where a path like ".." would whitelist the whole tree
+# a directory is a safe allowance only if it neither equals nor
+# contains ANY candidate root, not just the selected project: a planted
+# ancestor marker naming the checkout directory as its proposal line
+# would otherwise whitelist the entire checkout — the checkout is a
+# candidate, but it is not the selected project once the ancestor
+# marker wins the selection
 def safe_root(cand):
-    return cand != project and not under(project, cand)
+    return all(cand != r and not under(r, cand) for r in candidates)
 
 
 # the proposal allowance must also resolve to its own lexical path: a

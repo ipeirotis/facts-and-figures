@@ -27,20 +27,20 @@ the absence where there is nothing to hash.
   "schema": "facts-and-figures.verification/1",
   "skill_version": "0.5.0",
   "manuscript_files": ["manuscript.md"],
-  "pipeline_command": "python3 analysis/run_analysis.py",
-  "environment": "Python 3.11.15, stdlib only; seed 20260816",
+  "pipeline_command": "python3 analysis/run_pipeline.py",
+  "environment": "Python 3.11.15, stdlib only; seed 424242",
   "data_versions": {
-    "data/workers.csv": "sha256:..."
+    "data/survey.csv": "sha256:..."
   },
   "values": [
     {
-      "location": "manuscript.md, Data",
-      "reported": "71.48",
+      "location": "manuscript.md, Results",
+      "reported": "83.41",
       "classification": "match",
-      "computed": 71.4825,
-      "tolerance": "half-open [71.475, 71.485), k=2",
+      "computed": 83.4125,
+      "tolerance": "half-open [83.405, 83.415), k=2",
       "boundary": false,
-      "producing_command": "python3 analysis/run_analysis.py",
+      "producing_command": "python3 analysis/run_pipeline.py",
       "note": ""
     }
   ]
@@ -58,7 +58,7 @@ Each record in `values` carries one manuscript value:
 - `location` (required): where the value appears, precise enough for the
   author to find it.
 - `reported` (required): the value as the manuscript states it, verbatim —
-  `"71.48"`, `"13%"`, `"p < 0.001"`.
+  `"83.41"`, `"7%"`, `"p < 0.05"`.
 - `classification` (required): exactly one of `match`, `mismatch`,
   `unverifiable` — the same classes, under the same tolerance and predicate
   rules, as `references/analysis-integrity.md` defines. No other value is

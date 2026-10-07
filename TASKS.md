@@ -27,7 +27,9 @@ when its definition of done holds, not when code for it exists.
   the author may have said what they hope the numbers show — the
   contamination the no-forking-paths rule exists to prevent. It also keeps
   pipeline logs out of the main context and allows parallel fan-out (one run
-  per figure or manuscript section). The wrapper points at `SKILL.md` and
+  per figure or manuscript section, each in its own checkout — the singleton
+  run marker makes runs in one checkout mutually exclusive, as `README.md`
+  documents). The wrapper points at `SKILL.md` and
   never restates the protocol; it adds only the agent-mode adaptations
   (a mid-run question becomes an early return).
   *Done when:* the agent file ships with install instructions, its tool list
