@@ -122,15 +122,17 @@ def pair_records(values, anchors):
 
 
 def close(c, t):
-    """Equality up to float summation noise (~1e-13) and JSON round-trip,
-    SCALED: a fixed absolute epsilon would let a small value hide a
-    materially different one — a permutation p-value 0.9% off sat within
-    1e-6 of the documented 9.999e-05. Integer targets compare exactly:
-    counts are emitted exactly and carry no float noise, so the relative
-    term owes them no slack (10000.000009 is not the count 10000)."""
+    """Equality up to float summation noise and JSON round-trip, SCALED:
+    a fixed absolute epsilon would let a small value hide a materially
+    different one — a permutation p-value 0.9% off sat within 1e-6 of
+    the documented 9.999e-05. The bound is commensurate with the actual
+    noise (live values differ from the keyed ones by ~1e-14 relative),
+    so 71.48250005 is not the pipeline value 71.4825. Integer targets
+    compare exactly: counts are emitted exactly and carry no float
+    noise, so the relative term owes them no slack."""
     if isinstance(t, int) and not isinstance(t, bool):
         return c == t
-    return abs(c - t) <= 1e-9 + 1e-9 * abs(t)
+    return abs(c - t) <= 1e-12 + 1e-12 * abs(t)
 
 
 def computed_matches(computed, target):

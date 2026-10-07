@@ -262,6 +262,10 @@ MUTATIONS = [
     ("permutation count off by a millionth", [], "mock_good.json",
      lambda d: [r.update(computed=10000.000009) for r in d["values"]
                 if r.get("reported") == "10,000"], 1),
+    # ...and a float target owes only genuine summation noise
+    ("overall mean off beyond float noise", [], "mock_good.json",
+     lambda d: [r.update(computed=71.48250005) for r in d["values"]
+                if r.get("computed") == 71.4825], 1),
     # ...while citing the pipeline script it tried to run stays
     # legitimate
     ("gate reasons citing the pipeline script", ["--gate"], "mock_gate.json",
