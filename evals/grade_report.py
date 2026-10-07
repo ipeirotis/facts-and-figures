@@ -24,7 +24,7 @@ import re
 import sys
 from pathlib import Path
 
-from grade_json_report import NEG_ABSENCE_RE, anchor_rx
+from grade_json_report import NEG_ABSENCE_RE, anchor_rx, names_file
 
 EVALS = Path(__file__).resolve().parent
 WINDOW = 3  # lines of context on each side of an anchor line (gate mode)
@@ -183,7 +183,11 @@ def grade_gate(report, expected):
     lower_lines = [ln.lower() for ln in report.splitlines()]
     terms = [p.lower() for p in gc["report_must_contain_any"]]
     for name in gc["report_must_name"]:
-        idxs = [i for i, ln in enumerate(lower_lines) if name.lower() in ln]
+        # bounded, like every source comparison in the JSON grader: a
+        # report naming only notworkers.csv has not named the removed
+        # input — and with the gate companion optional, this prose path
+        # can be the only one grading the claim
+        idxs = [i for i, ln in enumerate(lower_lines) if names_file(name, ln)]
         if not idxs:
             print(f"FAIL  gate: report never names {name}")
             ok = False

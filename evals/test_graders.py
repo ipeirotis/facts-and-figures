@@ -397,6 +397,17 @@ MUTATIONS = [
      "mock_gate.json",
      lambda d: [r.update(reason="analysis.py is missing")
                 for r in d["values"]], 1),
+    # the file scan is extension-agnostic: blaming appendix.tex
+    # fabricates blockage as surely as blaming README.md
+    ("gate reasons citing an unkeyed tex file", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="appendix.tex is missing")
+                for r in d["values"]], 1),
+    # ...while prose idioms with dots are not filenames
+    ("gate reasons with a prose idiom", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="the required input is missing (e.g. the "
+                                "dataset the pipeline reads) and the "
+                                "pipeline did not run")
+                for r in d["values"]], 0),
 ]
 
 
@@ -485,6 +496,11 @@ MD_MUTATIONS = [
                 .replace("## Method and provenance", "## Method and provenance omitted")
                 .replace("## Results", "## Results omitted")
                 .replace("## Author decisions", "## Author decisions omitted"), 1),
+    # a prose report naming only a lookalike has not named the removed
+    # input — bounded matching applies to the prose path too, which can
+    # be the only grading path when the optional gate companion is absent
+    ("removed input replaced by a lookalike", "mock_gate.md", ["--gate"],
+     _replacing("workers.csv", "notworkers.csv"), 1),
 ]
 
 
