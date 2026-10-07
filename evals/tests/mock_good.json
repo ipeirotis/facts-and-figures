@@ -7,7 +7,7 @@
   "pipeline_command": "python3 analysis/run_analysis.py",
   "environment": "Python 3.11.15, stdlib only; seed 20260816",
   "data_versions": {
-    "data/workers.csv": "sha256:50580bb6"
+    "data/workers.csv": "sha256:50580bb6b229a1ad6c8ae7137245caf8a55e523ea21175175396ce859e45fdd6"
   },
   "values": [
     {

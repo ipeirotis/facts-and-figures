@@ -4,19 +4,23 @@
 # Prepares two scratch workspaces from the toy-paper fixture — one intact,
 # one with the dataset removed (the gate case) — installs the skill and the
 # write-boundary hook into each, runs Claude Code headless when the `claude`
-# CLI is available, and grades the resulting reports with grade_report.py.
-# Without the CLI it prepares the workspaces and prints the commands to run.
+# CLI is available, and grades everything: the prose reports, the
+# machine-readable companions, and the workspaces themselves (untouched
+# outside the proposal directory, run marker removed). Without the CLI it
+# prepares the workspaces and prints the commands to run; afterwards
+# `evals/run_agent_eval.sh --grade-only <workdir>` applies the exact same
+# grading and integrity checks.
 #
 # The workspaces receive the fixture and the skill's runtime files ONLY —
 # never this evals/ directory, which contains the answer key.
 #
 # Usage: evals/run_agent_eval.sh [workdir]
+#        evals/run_agent_eval.sh --grade-only <workdir>
 
 set -euo pipefail
 
 EVALS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_DIR="$(dirname "$EVALS_DIR")"
-WORK="${1:-$(mktemp -d /tmp/fnf-eval.XXXXXX)}"
 PROMPT="Using the facts-and-figures skill installed under .claude/skills/, verify every number reported in manuscript.md against this repository's analysis pipeline. Produce the skill's full four-section report."
 
 prepare() {
@@ -62,25 +66,62 @@ snapshot() {
 }
 
 workspace_clean() {
-    local ws="$1" pre="$2" label="$3" bad=0
+    local ws="$1" pre_file="$2" label="$3" bad=0
     if [ -e "$ws/facts-and-figures-out/.active" ]; then
         echo "FAIL  $label: run marker facts-and-figures-out/.active was not removed"
         bad=1
     fi
-    if ! diff <(printf '%s' "$pre") <(snapshot "$ws") > /dev/null; then
+    if ! diff "$pre_file" <(snapshot "$ws") > /dev/null; then
         echo "FAIL  $label: files outside the proposal directory changed during the run:"
-        diff <(printf '%s' "$pre") <(snapshot "$ws") | head -10
+        diff "$pre_file" <(snapshot "$ws") | head -10
         bad=1
     fi
     [ "$bad" -eq 0 ] && echo "PASS  $label: workspace untouched outside the proposal directory, marker removed"
     return "$bad"
 }
 
+grade_all() {
+    local rc=0
+
+    python3 "$EVALS_DIR/grade_report.py" "$WORK/verify-report.md" "$EVALS_DIR/expected.json" || rc=1
+    # the skill mandates the machine-readable companion when it can write,
+    # and this workspace is writable — so a missing file is itself a failure
+    local verify_json="$WORK/verify/facts-and-figures-out/verification-report.json"
+    if [ -f "$verify_json" ]; then
+        python3 "$EVALS_DIR/grade_json_report.py" "$verify_json" "$EVALS_DIR/expected.json" || rc=1
+    else
+        echo "FAIL  verification-report.json was not written to the proposal directory"
+        rc=1
+    fi
+    workspace_clean "$WORK/verify" "$WORK/verify.pre" "verify case" || rc=1
+
+    python3 "$EVALS_DIR/grade_report.py" --gate "$WORK/gated-report.md" "$EVALS_DIR/expected.json" || rc=1
+    # on a failed gate the JSON companion is optional (the prose naming the
+    # missing input is the deliverable), but when written it is held to the
+    # gate contract: all unverifiable, reasons given, nothing computed
+    local gate_json="$WORK/gated/facts-and-figures-out/verification-report.json"
+    if [ -f "$gate_json" ]; then
+        python3 "$EVALS_DIR/grade_json_report.py" --gate "$gate_json" "$EVALS_DIR/expected.json" || rc=1
+    else
+        echo "note: gate run wrote no JSON companion (permitted on a failed gate)"
+    fi
+    workspace_clean "$WORK/gated" "$WORK/gated.pre" "gate case" || rc=1
+
+    return "$rc"
+}
+
+if [ "${1:-}" = "--grade-only" ]; then
+    WORK="${2:?usage: run_agent_eval.sh --grade-only <workdir>}"
+    grade_all
+    exit "$?"
+fi
+
+WORK="${1:-$(mktemp -d /tmp/fnf-eval.XXXXXX)}"
 prepare verify
 prepare gated
 rm "$WORK/gated/data/workers.csv"
-PRE_VERIFY="$(snapshot "$WORK/verify")"
-PRE_GATED="$(snapshot "$WORK/gated")"
+snapshot "$WORK/verify" > "$WORK/verify.pre"
+snapshot "$WORK/gated" > "$WORK/gated.pre"
 
 echo "workspaces prepared under $WORK"
 
@@ -90,54 +131,19 @@ echo "workspaces prepared under $WORK"
 CLAUDE_ARGS=(--permission-mode acceptEdits --allowedTools Bash)
 
 if command -v claude >/dev/null 2>&1; then
-    rc=0
-
-    # reports are saved OUTSIDE the workspaces: a pre-created report file
-    # inside one is an artifact the agent under eval will notice and mention
     echo "== running verification case =="
     (cd "$WORK/verify" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/verify-report.md"
-    python3 "$EVALS_DIR/grade_report.py" "$WORK/verify-report.md" "$EVALS_DIR/expected.json" || rc=1
-
-    # the skill mandates the machine-readable companion when it can write,
-    # and this workspace is writable — so a missing file is itself a failure
-    JSON_REPORT="$WORK/verify/facts-and-figures-out/verification-report.json"
-    if [ -f "$JSON_REPORT" ]; then
-        python3 "$EVALS_DIR/grade_json_report.py" "$JSON_REPORT" "$EVALS_DIR/expected.json" || rc=1
-    else
-        echo "FAIL  verification-report.json was not written to the proposal directory"
-        rc=1
-    fi
-    workspace_clean "$WORK/verify" "$PRE_VERIFY" "verify case" || rc=1
-
     echo "== running gate case =="
     (cd "$WORK/gated" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/gated-report.md"
-    python3 "$EVALS_DIR/grade_report.py" --gate "$WORK/gated-report.md" "$EVALS_DIR/expected.json" || rc=1
-
-    # on a failed gate the JSON companion is optional (the prose naming the
-    # missing input is the deliverable), but when written it is held to the
-    # gate contract: all unverifiable, reasons given, nothing computed
-    GATE_JSON="$WORK/gated/facts-and-figures-out/verification-report.json"
-    if [ -f "$GATE_JSON" ]; then
-        python3 "$EVALS_DIR/grade_json_report.py" --gate "$GATE_JSON" "$EVALS_DIR/expected.json" || rc=1
-    else
-        echo "note: gate run wrote no JSON companion (permitted on a failed gate)"
-    fi
-    workspace_clean "$WORK/gated" "$PRE_GATED" "gate case" || rc=1
-
-    exit "$rc"
+    grade_all
+    exit "$?"
 else
     cat <<EOF
 claude CLI not found; run each case yourself, saving the agent's report,
-then grade the prose AND the machine-readable companion:
+then apply the full grading and workspace-integrity suite:
 
   cd $WORK/verify && claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/verify-report.md
-  python3 $EVALS_DIR/grade_report.py $WORK/verify-report.md
-  python3 $EVALS_DIR/grade_json_report.py $WORK/verify/facts-and-figures-out/verification-report.json
-  # a missing companion in the writable verify workspace is a FAILURE
-
   cd $WORK/gated && claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/gated-report.md
-  python3 $EVALS_DIR/grade_report.py --gate $WORK/gated-report.md
-  # optional on a failed gate, but grade it whenever it was written:
-  python3 $EVALS_DIR/grade_json_report.py --gate $WORK/gated/facts-and-figures-out/verification-report.json
+  $EVALS_DIR/run_agent_eval.sh --grade-only $WORK
 EOF
 fi

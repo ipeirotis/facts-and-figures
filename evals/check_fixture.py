@@ -78,6 +78,16 @@ def main():
             sys.exit(1)
         results = json.loads((fixture / expected["results_file"]).read_text())
 
+        # the answer key must still describe the manuscript: a target whose
+        # value or anchors appear nowhere in the text is stale, and grading
+        # against it would bless claims the manuscript no longer makes
+        manuscript = (fixture / "manuscript.md").read_text()
+        for t in expected["targets"]:
+            probes = [str(t["manuscript_value"])] + list(t.get("anchors", []))
+            check(any(p in manuscript for p in probes),
+                  f"{t['id']}: manuscript still states the keyed value",
+                  f"none of {probes[:3]}... found" if not any(p in manuscript for p in probes) else "")
+
         for t in expected["targets"]:
             tid = t["id"]
             v = results.get(t["result_key"])

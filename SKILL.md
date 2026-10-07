@@ -35,7 +35,7 @@ If the request does not identify the capability or target, ask one focused quest
 
 Require the author's analysis code in the repository, its data reachable in this session as the pipeline itself defines it (a file in the tree, or a remote source the pipeline is already configured to read and this session can access), and a shell. Require write access for figure regeneration or a new analysis. If an input or tool is missing or unreachable, name it and stop; never estimate, reconstruct, substitute another source, or invent a result.
 
-When the gates pass and the session can write, create the run marker `.active` inside the proposal directory (`facts-and-figures-out/` unless the author named another) before the first command; it arms the write-boundary hook shipped in `hooks/`, which finds a non-default directory through `FACTS_AND_FIGURES_OUT`, and its removal is part of the teardown confirmed in Return.
+When the gates pass and the session can write, create the run marker `facts-and-figures-out/.active` before the first command; when the author named a different proposal directory, write that directory's path as the marker's single line, which is how the write-boundary hook shipped in `hooks/` finds it. The marker's removal is part of the teardown confirmed in Return.
 
 ## Load the manuscript context and scope the files
 

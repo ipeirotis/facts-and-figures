@@ -1,28 +1,30 @@
 #!/usr/bin/env bash
 # facts-and-figures write-boundary guard — a Claude Code PreToolUse hook.
 #
-# While a facts-and-figures run is active (the run marker
-# <proposal-dir>/.active exists), deny Write/Edit/MultiEdit/NotebookEdit
-# calls that target anything outside the proposal directory or a scratch
-# root. Without the marker the hook is inert, so it never interferes with
-# ordinary editing sessions in the same repository.
+# The run marker always lives at <project>/facts-and-figures-out/.active,
+# so the hook can find it without environment coordination. While it
+# exists, Write/Edit/MultiEdit/NotebookEdit calls targeting anything
+# outside the proposal directory or a scratch root are denied; without it
+# the hook is inert and never interferes with ordinary editing sessions.
+#
+# When the author named a different proposal directory, the marker file's
+# single line carries that directory's path (relative to the project), and
+# the hook guards it; the FACTS_AND_FIGURES_OUT environment variable is
+# honored as a fallback for launches configured that way. A proposal
+# directory that equals or contains the project is rejected — it would
+# whitelist the author's tree — as is a scratch root that is not fully
+# disjoint from the project.
 #
 # The payload is parsed straight from stdin: a Write payload carries the
 # whole file content, and routing it through an environment variable or an
 # argument would fail with E2BIG on large writes, making the hook fail
-# open exactly when it matters. A scratch root (/tmp, $TMPDIR) is allowed
-# only when it does not contain the project: a checkout that itself lives
-# under /tmp would otherwise be entirely whitelisted.
+# open exactly when it matters.
 #
 # This is a guardrail, not a sandbox: writes made through shell commands
 # (Bash redirects, `sed -i`, the pipeline itself) are not intercepted. The
 # skill's master rule remains the primary control; this hook catches the
 # most common violation vector and restates the protocol at the moment of
 # violation.
-#
-# The proposal directory defaults to facts-and-figures-out/ under the
-# project root; set FACTS_AND_FIGURES_OUT to the directory the author named
-# if it differs. Registration instructions live in README.md.
 #
 # Fail-open by design: missing python3, unparseable input, or a call with
 # no file path allows the tool call rather than breaking the session.
@@ -45,12 +47,19 @@ if tool not in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
 
 project = os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd") or os.getcwd()
 project = os.path.realpath(project)
-out_dir = os.environ.get("FACTS_AND_FIGURES_OUT", "facts-and-figures-out")
-proposal = os.path.realpath(os.path.join(project, out_dir))
-marker = os.path.join(proposal, ".active")
+default_dir = os.path.realpath(os.path.join(project, "facts-and-figures-out"))
+marker = os.path.join(default_dir, ".active")
 
 if not os.path.exists(marker):
     sys.exit(0)
+
+try:
+    with open(marker) as f:
+        named = f.readline().strip()
+except Exception:
+    named = ""
+out_dir = named or os.environ.get("FACTS_AND_FIGURES_OUT", "") or "facts-and-figures-out"
+proposal = os.path.realpath(os.path.join(project, out_dir))
 
 tool_input = payload.get("tool_input") or {}
 target = tool_input.get("file_path") or tool_input.get("notebook_path")
@@ -61,10 +70,12 @@ cwd = payload.get("cwd") or project
 resolved = os.path.realpath(os.path.join(cwd, os.path.expanduser(target)))
 
 allowed = []
-# the proposal directory is allowed unless it equals or contains the
-# project, where FACTS_AND_FIGURES_OUT=.. would whitelist the whole tree
-if proposal != project and not project.startswith(proposal + os.sep):
-    allowed.append(proposal)
+# a proposal directory is allowed unless it equals or contains the
+# project, where a path like ".." would whitelist the whole tree; the
+# default marker directory stays writable alongside a custom proposal
+for cand in (proposal, default_dir):
+    if cand != project and not project.startswith(cand + os.sep):
+        allowed.append(cand)
 for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
     if not scratch:
         continue

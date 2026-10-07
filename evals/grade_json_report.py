@@ -19,6 +19,7 @@ record must be unverifiable with a reason, no computed values, and the
 missing input must be named. Exit code 0 iff every check passes.
 """
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -116,6 +117,15 @@ def grade_top_level(g, report):
 def grade_targets(report, expected):
     g = Grader()
     values = grade_top_level(g, report)
+
+    # the data provenance must identify the actual fixture input, not an
+    # invented file or digest — the workspaces are byte copies, so the
+    # repository fixture's hash is the ground truth
+    fixture_data = EVALS / expected["fixture"] / "data" / "workers.csv"
+    true_hash = hashlib.sha256(fixture_data.read_bytes()).hexdigest()
+    recorded = str((report.get("data_versions") or {}).get("data/workers.csv", ""))
+    g.check(true_hash in recorded, "data_versions carries the real workers.csv digest",
+            "" if true_hash in recorded else f"recorded: {recorded[:50]!r}")
 
     paired = set()
     for t in expected["targets"]:

@@ -78,11 +78,22 @@ def main():
               proj, want_deny=True)
 
         # a proposal override that contains the project must not whitelist it
-        (proj.parent / ".active").touch()
+        marker = proj / "facts-and-figures-out" / ".active"
         check("FACTS_AND_FIGURES_OUT=..: manuscript write still denied",
               write_payload(proj, proj / "manuscript.md"), proj, want_deny=True,
               extra_env={"FACTS_AND_FIGURES_OUT": ".."})
-        (proj.parent / ".active").unlink()
+        marker.write_text("..\n")
+        check("marker naming ..: manuscript write still denied",
+              write_payload(proj, proj / "manuscript.md"), proj, want_deny=True)
+
+        # an author-named proposal directory carried in the marker content
+        (proj / "custom-out").mkdir(exist_ok=True)
+        marker.write_text("custom-out\n")
+        check("marker naming custom-out: custom proposal write allowed",
+              write_payload(proj, proj / "custom-out" / "s.py"), proj, want_deny=False)
+        check("marker naming custom-out: manuscript write denied",
+              write_payload(proj, proj / "manuscript.md"), proj, want_deny=True)
+        marker.write_text("")
 
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)

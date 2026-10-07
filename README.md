@@ -63,7 +63,7 @@ Register `hooks/write-boundary.sh` as a `PreToolUse` hook in the manuscript repo
 }
 ```
 
-While a run is active (the skill creates `facts-and-figures-out/.active` when its gates pass, and removes it at teardown), the hook denies file edits outside the proposal directory; without the marker it is inert, so ordinary editing sessions in the same repository are unaffected. If the author named a different proposal directory, set `FACTS_AND_FIGURES_OUT` to it. This is a guardrail, not a sandbox — writes made through shell commands are not intercepted, and the skill's master rule remains the primary control.
+While a run is active (the skill creates `facts-and-figures-out/.active` when its gates pass, and removes it at teardown), the hook denies file edits outside the proposal directory; without the marker it is inert, so ordinary editing sessions in the same repository are unaffected. If the author named a different proposal directory, the marker's single line carries its path and the hook guards that directory (`FACTS_AND_FIGURES_OUT` is honored as a fallback). This is a guardrail, not a sandbox — writes made through shell commands are not intercepted, and the skill's master rule remains the primary control.
 
 ## What it does
 
