@@ -13,6 +13,10 @@ k decimals, with u = 10^-k, the accepted set is |m| - u/2 <= |v| < |m| + u/2
 with v of the same sign as m (for m = 0, simply |v| < u/2); a value landing
 exactly on the lower magnitude endpoint is a match that must additionally
 be disclosed as a boundary case; the upper magnitude endpoint is excluded.
+EPS exists only to absorb floating-point summation noise (~1e-13): the
+fixture's design doctrine is that every planted value is constructed
+exactly (integer cents, binary-exact fractions), never within EPS of an
+endpoint it does not sit on, so EPS never decides a classification.
 
 Usage: python3 evals/check_fixture.py
 Exit code 0 iff every check passes.

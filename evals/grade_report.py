@@ -86,10 +86,15 @@ def grade_targets(report, expected):
             print(f"FAIL  {t['id']}: no report line mentions any anchor {t['anchors']}")
             ok = False
         if t.get("boundary"):
-            if BOUNDARY_RE.search(report):
-                print(f"PASS  {t['id']}: boundary case disclosed")
+            # the protocol requires the tie named in Author decisions, not
+            # merely mentioned in Results, so the author chooses the
+            # rounding convention
+            idx = report.lower().rfind("author decisions")
+            decisions = report[idx:] if idx != -1 else ""
+            if BOUNDARY_RE.search(decisions):
+                print(f"PASS  {t['id']}: boundary case raised in Author decisions")
             else:
-                print(f"FAIL  {t['id']}: boundary/tie disclosure not found anywhere in report")
+                print(f"FAIL  {t['id']}: boundary/tie not raised in the Author decisions section")
                 ok = False
     return ok
 

@@ -29,7 +29,8 @@
       "expected": "match",
       "boundary": false,
       "anchors": ["20 / 20", "20/20", "20 experienced", "n_experienced"],
-      "note": "the 20-and-20 group split; a record may bundle both group counts as a list"
+      "bundle_expect": [20, 20],
+      "note": "the 20-and-20 group split; a record bundling both group counts must carry both"
     },
     {
       "id": "overall-mean",

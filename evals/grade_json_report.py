@@ -59,6 +59,21 @@ def computed_matches(computed, target):
         return isinstance(c, (int, float)) and any(abs(c - t) < EPS for t in true_candidates)
 
     if isinstance(computed, (list, tuple)):
+        expect = target.get("bundle_expect")
+        if expect is not None:
+            # a target whose claim bundles a fixed set of quantities (the
+            # two group counts) must carry exactly that multiset — [20]
+            # verifies only one group of the 20 / 20 claim
+            if len(computed) != len(expect):
+                return False
+            remaining = list(expect)
+            for c in computed:
+                hit = next((i for i, e in enumerate(remaining)
+                            if isinstance(c, (int, float)) and abs(c - e) < EPS), None)
+                if hit is None:
+                    return False
+                remaining.pop(hit)
+            return True
         allowed = true_candidates + list(target.get("bundle_allowed", []))
         def is_allowed(c):
             return isinstance(c, (int, float)) and any(abs(c - a) < EPS for a in allowed)
@@ -82,9 +97,10 @@ def grade_top_level(g, report):
         g.check(good, f"top-level {key} present and non-empty",
                 "" if good else repr(v)[:60])
     values = report.get("values") or []
-    bad = [i for i, r in enumerate(values) if RECORD_REQUIRED - r.keys()]
-    g.check(not bad, "required record fields present",
-            f"records missing fields: {bad}" if bad else f"{len(values)} records")
+    bad = [i for i, r in enumerate(values)
+           if any(not str(r.get(k) or "").strip() for k in RECORD_REQUIRED)]
+    g.check(not bad, "required record fields present and non-empty",
+            f"records with missing or empty fields: {bad}" if bad else f"{len(values)} records")
     return values
 
 
@@ -141,9 +157,14 @@ def grade_targets(report, expected):
 def grade_gate(report, expected):
     g = Grader()
     values = grade_top_level(g, report)
+    paired = set()
     for t in expected["targets"]:
-        g.check(bool(pair_records(values, t["anchors"])),
-                f"gate: {t['id']} covered by a record")
+        recs = pair_records(values, t["anchors"])
+        paired.update(id(r) for r in recs)
+        g.check(bool(recs), f"gate: {t['id']} covered by a record")
+    stray = [r.get("reported") for r in values if id(r) not in paired]
+    g.check(not stray, "gate: every record covers an in-scope manuscript value",
+            f"stray records: {stray}" if stray else "")
     g.check(all(r.get("classification") == "unverifiable" for r in values),
             "every record is unverifiable after the failed gate",
             str(sorted({str(r.get('classification')) for r in values})))
