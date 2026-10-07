@@ -434,6 +434,20 @@ def main():
         check("bootstrap marker naming an empty directory: allowed",
               write_payload(p8, p8 / "facts-and-figures-out" / ".active",
                             content="empty-out\n"), p8, want_deny=False)
+        # an unlistable named directory may still hold writable files —
+        # the inspection failure must count as occupied. Root bypasses
+        # directory permission bits, so this case is only testable
+        # unprivileged
+        if os.geteuid() != 0:
+            (p8 / "sealed-out").mkdir()
+            (p8 / "sealed-out" / "x.txt").write_text("x\n")
+            (p8 / "sealed-out").chmod(0o311)
+            try:
+                check("bootstrap marker naming an unlistable directory: denied",
+                      write_payload(p8, p8 / "facts-and-figures-out" / ".active",
+                                    content="sealed-out\n"), p8, want_deny=True)
+            finally:
+                (p8 / "sealed-out").chmod(0o755)
 
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)

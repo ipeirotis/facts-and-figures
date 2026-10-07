@@ -32,7 +32,11 @@ prepare() {
 
     local sk="$ws/.claude/skills/facts-and-figures"
     mkdir -p "$sk"
-    for f in SKILL.md AGENTS.md README.md VERSION LICENSE; do
+    # runtime files only: README.md describes the planted defects in its
+    # Evals section and AGENTS.md is development instructions by its own
+    # declaration — copying either hands the measured agent expectations
+    # it should not have
+    for f in SKILL.md VERSION LICENSE; do
         cp "$SKILL_DIR/$f" "$sk/"
     done
     cp -r "$SKILL_DIR/references" "$sk/references"

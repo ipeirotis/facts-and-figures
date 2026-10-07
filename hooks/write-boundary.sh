@@ -178,7 +178,10 @@ if not os.path.lexists(marker):
         try:
             occupied = os.path.isdir(named_dir) and bool(os.listdir(named_dir))
         except OSError:
-            occupied = False
+            # an unlistable directory (execute-only modes) may still
+            # hold writable files the allowance would cover — an
+            # inspection failure counts as occupied, not empty
+            occupied = True
         if occupied:
             deny(
                 "facts-and-figures write boundary: this marker names {d} as the "

@@ -196,6 +196,15 @@ MUTATIONS = [
     ("reported predicate reversed", [], "mock_good.json",
      lambda d: [r.update(reported="p > 0.001") for r in d["values"]
                 if r.get("reported") == "p < 0.001"], 1),
+    # an equality is not the manuscript claim either: the keyed operator
+    # and threshold must be stated
+    ("reported predicate reduced to equality", [], "mock_good.json",
+     lambda d: [r.update(reported="p = 0.001") for r in d["values"]
+                if r.get("reported") == "p < 0.001"], 1),
+    # a negated seed mention names the digits while denying them
+    ("seed denied in the environment field", [], "mock_good.json",
+     lambda d: d.update(environment="Python 3.11.15, stdlib only; "
+                                    "seed was not 20260816; actual seed 7"), 1),
     # a gate reason citing only the optional wave-2 source manufactures
     # failure provenance for the nine targets the gate did not block
     # through it

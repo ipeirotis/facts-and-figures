@@ -53,6 +53,11 @@ def classify(v, m, decimals):
         return "match", True
     if lo < av < hi - EPS:
         return "match", False
+    # the upper endpoint of the half-open interval is outside it — a
+    # mismatch — but an exact endpoint is still a tie the protocol
+    # requires flagged and disclosed, on either side
+    if m != 0 and abs(av - hi) < EPS:
+        return "mismatch", True
     return "mismatch", False
 
 

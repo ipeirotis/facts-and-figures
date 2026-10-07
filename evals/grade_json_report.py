@@ -283,7 +283,14 @@ def grade_targets(report, expected):
             [str(report.get("environment", "")), str(report.get("pipeline_command", ""))]
             + [str(r.get("producing_command", "")) for r in values]
             + [str(r.get("computed", "")) for r in values])
-        g.check(seed in prov, "the pipeline seed appears in the provenance fields")
+        # a negated mention is not provenance: "seed was not 20260816;
+        # actual seed 7" names the digits while denying them, so the
+        # negated phrase is stripped before the scan
+        neg_seed = re.compile(
+            r"\b(?:not|never|wasn.?t|isn.?t)\s+(?:\w+\s+){0,2}?" + re.escape(seed),
+            re.I)
+        g.check(seed in neg_seed.sub(" ", prov),
+                "the pipeline seed appears in the provenance fields")
 
     paired = set()
     for t in expected["targets"]:
@@ -292,23 +299,21 @@ def grade_targets(report, expected):
         if not recs:
             g.check(False, f"{t['id']}: a record covers it", f"no record mentions {t['anchors']}")
             continue
-        # a reported field must not reverse a keyed predicate: a record
-        # pairing on the bare threshold while stating "p > 0.001"
-        # asserts the opposite of the manuscript claim, with the
-        # unchanged computed value blessing the contradiction. The
-        # contradiction comes from the key's own predicate fields — no
-        # verbatim reported key is needed
+        # a predicate claim is irreducibly its operator and threshold:
+        # "p > 0.001", "p = 0.001" and a bare "0.001" all pair on the
+        # number while reversing, altering, or dropping the manuscript
+        # assertion. The requirement comes from the keyed predicate
+        # fields the answer key already carries — not a verbatim
+        # reported key
         if t.get("kind") == "predicate" and t.get("predicate") in ("less_than",
                                                                    "greater_than"):
-            wrong_op = ">" if t["predicate"] == "less_than" else "<"
-            pv = str(t.get("predicate_value", ""))
-            bad_ops = (wrong_op + pv, wrong_op + "=" + pv)
-            rev = [r.get("reported") for r in recs
-                   if any(b in str(r.get("reported", "")).lower().replace(" ", "")
-                          for b in bad_ops)]
-            g.check(not rev,
-                    f"{t['id']}: reported does not reverse the manuscript predicate",
-                    f"reported: {rev}" if rev else "")
+            op = "<" if t["predicate"] == "less_than" else ">"
+            want_ns = op + str(t.get("predicate_value", ""))
+            bad_pred = [r.get("reported") for r in recs
+                        if want_ns not in str(r.get("reported", "")).lower().replace(" ", "")]
+            g.check(not bad_pred,
+                    f"{t['id']}: reported states the keyed predicate {want_ns}",
+                    f"reported: {bad_pred}" if bad_pred else "")
         cls = {r.get("classification") for r in recs}
         g.check(cls == {t["expected"]}, f"{t['id']}: classified {t['expected']}",
                 f"report says {sorted(map(str, cls))}")
