@@ -66,4 +66,5 @@ jobs:
           path: |
             ${{ runner.temp }}/fnf-eval/*-report.md
             ${{ runner.temp }}/fnf-eval/verify/facts-and-figures-out/verification-report.json
+            ${{ runner.temp }}/fnf-eval/gated/facts-and-figures-out/verification-report.json
           if-no-files-found: warn

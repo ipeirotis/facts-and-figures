@@ -145,8 +145,12 @@ if command -v claude >/dev/null 2>&1; then
     # this directory AND the git object database are closed off (restored
     # even if a run dies) — chmodding the working tree alone still left
     # `git show HEAD:evals/expected.json` readable from the checkout.
-    # Root bypasses permission bits; CI runners and ordinary local users
-    # do not.
+    # Known limit: this is hygiene against incidental reads by an honest
+    # agent, not a security boundary — mode bits are owner-reversible
+    # (and root ignores them), so a process determined to read the key
+    # could chmod it back. A guarantee needs a filesystem namespace that
+    # exposes only the prepared fixture to the measured process, which is
+    # CI-infrastructure territory, not a portable shell harness.
     restore_key() {
         chmod 755 "$EVALS_DIR"
         if [ -d "$SKILL_DIR/.git" ]; then chmod 755 "$SKILL_DIR/.git"; fi

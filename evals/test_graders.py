@@ -39,14 +39,25 @@ def _numeric_reported(d):
             r["reported"] = 10000
 
 
-# single-field corruptions of a passing mock that the JSON grader must
-# reject: (label, extra args, base mock, mutation)
+def _renamed_data_key(d):
+    """A legitimate alternative spelling of the hashed input's path must
+    still pass: the schema requires the actual path, not one dictionary
+    key."""
+    d["data_versions"] = {"./data/workers.csv": v
+                          for v in [d["data_versions"]["data/workers.csv"]]}
+
+
+# single-field edits of a passing mock and the grader verdict each must
+# produce: (label, extra args, base mock, mutation, expected exit code)
 MUTATIONS = [
-    ("numeric reported", [], "mock_good.json", _numeric_reported),
+    ("numeric reported", [], "mock_good.json", _numeric_reported, 1),
     ("wrong skill_version", [], "mock_good.json",
-     lambda d: d.update(skill_version="not-the-installed-skill")),
+     lambda d: d.update(skill_version="not-the-installed-skill"), 1),
     ("fabricated digest for removed input", ["--gate"], "mock_gate.json",
-     lambda d: d["data_versions"].update({"data/workers.csv": "sha256:" + "0" * 64})),
+     lambda d: d["data_versions"].update({"data/workers.csv": "sha256:" + "0" * 64}), 1),
+    ("presence claimed for removed input", ["--gate"], "mock_gate.json",
+     lambda d: d["data_versions"].update({"data/workers.csv": "present and verified"}), 1),
+    ("./-prefixed data_versions key", [], "mock_good.json", _renamed_data_key, 0),
 ]
 
 
@@ -86,13 +97,13 @@ def main():
         if not ok:
             print(proc.stdout)
             failures += 1
-    for label, extra, mock, mutate in MUTATIONS:
+    for label, extra, mock, mutate, want in MUTATIONS:
         path = prepared(mock, mutate)
         proc = run_grader("grade_json_report.py", extra, path)
         path.unlink()
-        ok = proc.returncode == 1
+        ok = proc.returncode == want
         print(f"{'PASS' if ok else 'FAIL'}  grade_json_report.py {' '.join(extra)} {mock} with {label}: "
-              f"exit {proc.returncode}, want 1")
+              f"exit {proc.returncode}, want {want}")
         if not ok:
             print(proc.stdout)
             failures += 1

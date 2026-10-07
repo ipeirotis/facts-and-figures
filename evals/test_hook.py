@@ -150,6 +150,25 @@ def main():
               write_payload(sproj, sproj / "facts-and-figures-out" / ".active"), sproj,
               want_deny=True)
 
+        # the marker bootstrap is the one write the protocol makes while
+        # the guard is unarmed: through an already-symlinked default
+        # directory it must be denied, through a real directory it is the
+        # ordinary lifecycle write
+        nproj = Path(home_base) / "paper4"
+        nproj.mkdir()
+        (nproj / "data").mkdir()
+        (nproj / "facts-and-figures-out").symlink_to(nproj / "data")
+        check("no marker, symlinked root: marker bootstrap write denied",
+              write_payload(nproj, nproj / "facts-and-figures-out" / ".active"), nproj,
+              want_deny=True)
+        check("no marker, symlinked root: unrelated write still allowed",
+              write_payload(nproj, nproj / "notes.md"), nproj, want_deny=False)
+        rproj = Path(home_base) / "paper5"
+        (rproj / "facts-and-figures-out").mkdir(parents=True)
+        check("no marker, real root: marker bootstrap write allowed",
+              write_payload(rproj, rproj / "facts-and-figures-out" / ".active"), rproj,
+              want_deny=False)
+
         # a broken marker symlink must still arm the guard: with exists()
         # it would read as absent and the write recreating the marker could
         # follow the link to create an author file

@@ -49,11 +49,43 @@ project = os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd") or os.getcw
 project = os.path.realpath(project)
 marker = os.path.join(project, "facts-and-figures-out", ".active")
 
+tool_input = payload.get("tool_input") or {}
+target = tool_input.get("file_path") or tool_input.get("notebook_path")
+if not target:
+    sys.exit(0)
+
+cwd = payload.get("cwd") or project
+lexical = os.path.normpath(os.path.join(cwd, os.path.expanduser(target)))
+resolved = os.path.realpath(lexical)
+
+
+def deny(reason):
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason,
+        }
+    }))
+    sys.exit(0)
+
+
 # lexists: a marker that is a broken symlink still arms the guard — with
 # exists() a dangling link would read as absent, the hook would go inert,
 # and the write that recreates the marker could follow the link to create
 # an author file outside the proposal directory
 if not os.path.lexists(marker):
+    # inert without the marker — except for the one write the protocol
+    # makes while unarmed, the marker bootstrap itself: that write must
+    # resolve to the marker path, or a default directory that is already
+    # a symlink routes the marker creation into an author directory
+    if lexical == marker and os.path.realpath(marker) != marker:
+        deny(
+            "facts-and-figures write boundary: the marker path {m} does not resolve "
+            "to itself — facts-and-figures-out is a symlink, so creating the run "
+            "marker there would land outside the proposal directory. Replace "
+            "facts-and-figures-out with a real directory first.".format(m=marker)
+        )
     sys.exit(0)
 
 try:
@@ -64,15 +96,6 @@ except Exception:
 out_dir = named or os.environ.get("FACTS_AND_FIGURES_OUT", "") or "facts-and-figures-out"
 proposal_lexical = os.path.normpath(os.path.join(project, out_dir))
 proposal = os.path.realpath(proposal_lexical)
-
-tool_input = payload.get("tool_input") or {}
-target = tool_input.get("file_path") or tool_input.get("notebook_path")
-if not target:
-    sys.exit(0)
-
-cwd = payload.get("cwd") or project
-lexical = os.path.normpath(os.path.join(cwd, os.path.expanduser(target)))
-resolved = os.path.realpath(lexical)
 
 
 def under(path, root):
@@ -136,19 +159,11 @@ else:
         if under(resolved, root) and not multi_linked(resolved):
             sys.exit(0)
 
-reason = (
+deny(
     "facts-and-figures write boundary: a run is active (marker {m}) and {t} is outside "
     "the proposal directory {p}. The skill never edits the manuscript, data, figures, or "
     "analysis code; write generated work under the proposal directory instead. If no run "
-    "is actually in progress, remove the marker file to disarm this guard."
-).format(m=marker, t=resolved, p=proposal)
-
-print(json.dumps({
-    "hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": "deny",
-        "permissionDecisionReason": reason,
-    }
-}))
-sys.exit(0)
+    "is actually in progress, remove the marker file to disarm this guard.".format(
+        m=marker, t=resolved, p=proposal)
+)
 '
