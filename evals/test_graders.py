@@ -234,6 +234,19 @@ MD_MUTATIONS = [
     # shift the decisions span and fail a valid report
     ("closing sentence repeating Author decisions", "mock_good.md", [],
      lambda t: t + "\nThese conclude the Author decisions.\n", 0),
+    # "40 workers" inside "140 workers" is not coverage of the 40-worker
+    # claim: the prose anchors carry the JSON grader's digit guards
+    ("sample-size comparison drifted to 140", "mock_good.md", [], _replacing(
+     "- Sample size: manuscript reports 40 workers, pipeline n_workers gives 40 -> match.",
+     "- Sample size: manuscript reports 140 workers, pipeline gives 140 -> match."), 1),
+    # a negated absence claim must not satisfy the gate's absence terms
+    # on the strength of the token it negates
+    ("negated absence claim in gate prose", "mock_gate.md", ["--gate"],
+     lambda t: t.replace(
+         "required input data/workers.csv is missing from the repository",
+         "input data/workers.csv is not missing; it is present and verified")
+     .replace("required input not found: data/workers.csv",
+              "input check: data/workers.csv is not missing"), 1),
 ]
 
 

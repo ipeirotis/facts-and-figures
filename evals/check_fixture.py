@@ -94,6 +94,17 @@ def main():
             hit = any(anchor_rx(p).search(manuscript) for p in probes)
             check(hit, f"{t['id']}: manuscript still states the keyed value",
                   f"none of {probes[:3]}... found" if not hit else "")
+            # a bundled claim must survive as a complete multiset: with
+            # bundle_expect [20, 20] a manuscript drifted to "20 ... and
+            # 30 without" still contains one 20, so each bundled value
+            # must appear at least as often as the bundle repeats it
+            bundle = [str(b) for b in (t.get("bundle_expect") or [])]
+            for val in sorted(set(bundle)):
+                n = bundle.count(val)
+                found = len(anchor_rx(val).findall(manuscript))
+                check(found >= n,
+                      f"{t['id']}: manuscript states {val} at least {n} times",
+                      f"found {found}" if found < n else "")
 
         for t in expected["targets"]:
             tid = t["id"]

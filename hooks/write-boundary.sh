@@ -50,23 +50,27 @@ if tool not in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
 # a candidate may be a subdirectory rather than a root: the payload cwd
 # follows the session into any directory it changes into, and judging
 # the marker against <root>/analysis/facts-and-figures-out would read an
-# armed tree as unarmed. Ascend to the nearest ancestor holding a
+# armed tree as unarmed. Ascend to the OUTERMOST ancestor holding a
 # marker, falling back to the nearest holding a .git entry (a linked
 # worktree carries .git as a file), and keep the path as given with
-# neither anywhere above. An armed marker outranks a nearer .git: a
-# nested repository or submodule inside an armed project must not cut
-# the ascent short of the marker that governs it
+# neither anywhere above. Any marker outranks a nearer .git — a nested
+# repository or submodule inside an armed project must not cut the
+# ascent short of the marker that governs it — and the outermost marker
+# outranks a nearer one: a stale or planted marker in a subdirectory,
+# naming ../data as its proposal line, would otherwise shadow the real
+# marker above and re-aim the allowance at the author data directory
 def rootof(p):
     cur = p
+    top = ""
     git = ""
     while True:
         if os.path.lexists(os.path.join(cur, "facts-and-figures-out", ".active")):
-            return cur
+            top = cur
         if not git and os.path.lexists(os.path.join(cur, ".git")):
             git = cur
         nxt = os.path.dirname(cur)
         if nxt == cur:
-            return git or p
+            return top or git or p
         cur = nxt
 
 
@@ -100,14 +104,18 @@ if not candidates:
 cwd_real = os.path.realpath(payload.get("cwd") or os.getcwd())
 marked = [c for c in candidates
           if os.path.lexists(os.path.join(c, "facts-and-figures-out", ".active"))]
-project = candidates[0]
-for c in marked:
-    if cwd_real == c or cwd_real.startswith(c + os.sep):
-        project = c
-        break
+# among marked roots containing the cwd, the SHALLOWEST wins for the
+# same reason the ascent prefers the outermost marker: the nested one
+# may be stale or planted, and choosing it would judge the write by a
+# marker the outer run does not own
+containing = [c for c in marked
+              if cwd_real == c or cwd_real.startswith(c + os.sep)]
+if containing:
+    project = min(containing, key=len)
+elif marked:
+    project = marked[0]
 else:
-    if marked:
-        project = marked[0]
+    project = candidates[0]
 marker = os.path.join(project, "facts-and-figures-out", ".active")
 
 tool_input = payload.get("tool_input") or {}

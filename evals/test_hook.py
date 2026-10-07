@@ -358,6 +358,20 @@ def main():
               write_payload(o3, o3 / "facts-and-figures-out" / "r.json"), o3,
               want_deny=False)
 
+        # a stale or planted marker in a subdirectory must not shadow
+        # the real marker at the root: its content naming ../data would
+        # re-aim the proposal allowance at the author data directory
+        (wproj / "analysis" / "facts-and-figures-out").mkdir()
+        (wproj / "analysis" / "facts-and-figures-out" / ".active").write_text("../data\n")
+        (wproj / "data").mkdir()
+        check("nested marker shadowing: write into author data denied",
+              write_payload(wproj / "analysis", wproj / "data" / "x.csv"), oproj,
+              want_deny=True)
+        check("nested marker shadowing: root proposal write still allowed",
+              write_payload(wproj / "analysis",
+                            wproj / "facts-and-figures-out" / "s2.py"), oproj,
+              want_deny=False)
+
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)
         check("TMPDIR inside project: data write still denied",

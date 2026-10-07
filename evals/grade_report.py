@@ -24,6 +24,8 @@ import re
 import sys
 from pathlib import Path
 
+from grade_json_report import NEG_ABSENCE_RE, anchor_rx
+
 EVALS = Path(__file__).resolve().parent
 WINDOW = 3  # lines of context on each side of an anchor line (gate mode)
 
@@ -60,7 +62,10 @@ def grade_sections(report):
 
 
 def anchor_lines(lines, anchors):
-    return [i for i, ln in enumerate(lines) if any(a.lower() in ln.lower() for a in anchors)]
+    """Lines mentioning any anchor, with the JSON grader's digit guards:
+    a line asserting 140 does not cover a target whose anchor is 40."""
+    rxs = [anchor_rx(a) for a in anchors]
+    return [i for i, ln in enumerate(lines) if any(rx.search(ln.lower()) for rx in rxs)]
 
 
 def section_span(report, name):
@@ -171,7 +176,11 @@ def grade_gate(report, expected):
             ok = False
             continue
         print(f"PASS  gate: report names {name}")
-        if any(any(t in "\n".join(lower_lines[max(0, i - 2):i + 3]) for t in terms)
+        # negated absence phrases are stripped before the term scan, so
+        # "not missing; present and verified" cannot state the absence
+        # on the strength of the token it negates
+        if any(any(t in NEG_ABSENCE_RE.sub(" ", "\n".join(lower_lines[max(0, i - 2):i + 3]))
+                   for t in terms)
                for i in idxs):
             print(f"PASS  gate: absence stated with {name}")
         else:
