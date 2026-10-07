@@ -167,16 +167,37 @@ if command -v claude >/dev/null 2>&1; then
     dir_mode() {
         python3 -c 'import os,sys;print(oct(os.stat(sys.argv[1]).st_mode & 0o7777)[2:])' "$1"
     }
-    EVALS_MODE="$(dir_mode "$EVALS_DIR")"
-    GIT_MODE=""
-    if [ -d "$SKILL_DIR/.git" ]; then GIT_MODE="$(dir_mode "$SKILL_DIR/.git")"; fi
+    # lock the RESOLVED git directories, not a literal .git path: in a
+    # linked worktree .git is a pointer file and the object database
+    # lives under the main checkout, where `git show HEAD:...` would
+    # still read the answer key past a lockout of the pointer alone
+    LOCK_DIRS=("$EVALS_DIR")
+    LOCK_MODES=()
+    if command -v git >/dev/null 2>&1; then
+        GD="$(git -C "$SKILL_DIR" rev-parse --absolute-git-dir 2>/dev/null || true)"
+        GCD="$(git -C "$SKILL_DIR" rev-parse --git-common-dir 2>/dev/null || true)"
+        for d in "$GD" "$GCD"; do
+            if [ -z "$d" ]; then continue; fi
+            case "$d" in /*) : ;; *) d="$SKILL_DIR/$d" ;; esac
+            d="$(python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$d")"
+            dup=0
+            for e in "${LOCK_DIRS[@]}"; do
+                if [ "$e" = "$d" ]; then dup=1; fi
+            done
+            if [ "$dup" = 0 ] && [ -d "$d" ]; then LOCK_DIRS+=("$d"); fi
+        done
+    fi
+    for d in "${LOCK_DIRS[@]}"; do LOCK_MODES+=("$(dir_mode "$d")"); done
     restore_key() {
-        chmod "$EVALS_MODE" "$EVALS_DIR"
-        if [ -n "$GIT_MODE" ]; then chmod "$GIT_MODE" "$SKILL_DIR/.git"; fi
+        # reverse order: a parent (the common dir) must be reopened
+        # before a child under it can be chmodded back
+        local i
+        for (( i=${#LOCK_DIRS[@]}-1; i>=0; i-- )); do
+            chmod "${LOCK_MODES[$i]}" "${LOCK_DIRS[$i]}" 2>/dev/null || true
+        done
     }
     trap restore_key EXIT
-    chmod 000 "$EVALS_DIR"
-    if [ -d "$SKILL_DIR/.git" ]; then chmod 000 "$SKILL_DIR/.git"; fi
+    for d in "${LOCK_DIRS[@]}"; do chmod 000 "$d"; done
     echo "== running verification case =="
     (cd "$WORK/verify" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/verify-report.md"
     echo "== running gate case =="

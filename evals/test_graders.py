@@ -121,6 +121,9 @@ MUTATIONS = [
     ("absence entry keyed to a different file", ["--gate"], "mock_gate.json",
      lambda d: d.update(data_versions={"data/notworkers.csv":
                                        d["data_versions"]["data/workers.csv"]}), 1),
+    ("seed exiled from provenance to a note", [], "mock_good.json",
+     lambda d: (d.update(environment="Python 3.11.15, stdlib only"),
+                d["values"][0].update(note="the run used seed 20260816")), 1),
 ]
 
 
@@ -139,26 +142,42 @@ def _absence_words_removed(text):
     return text
 
 
-# text-level corruptions of a passing prose mock that grade_report.py must
-# reject: (label, mock file, extra args, text transform)
+def _absence_decoupled(text):
+    """Absence language for a different file must not satisfy the check
+    for the removed input. Padding keeps the decoy outside the grader's
+    co-occurrence window around the last workers.csv mention."""
+    return (_absence_words_removed(text)
+            + "\n\nAdditional notes follow.\n\n\n"
+            + "Note: wave2_followup.csv is missing from the distribution.\n")
+
+
+# text-level edits of a passing prose mock and the grader verdict each
+# must produce: (label, mock file, extra args, text transform, want)
 MD_MUTATIONS = [
     ("misdirected boundary", "mock_good.md", [], _replacing(
      "The flagged share sits exactly on the rounding boundary; confirm the intended convention.",
-     "There are no boundary concerns for the overall mean 71.48.")),
+     "There are no boundary concerns for the overall mean 71.48."), 1),
     ("mismatch dropped from Author decisions", "mock_good.md", [], _replacing(
      "The reported difference 6.23 disagrees with the pipeline's 6.32; decide whether to correct both occurrences.",
-     "Decide whether any corrections are needed.")),
+     "Decide whether any corrections are needed."), 1),
     ("unverifiable dropped from Author decisions", "mock_good.md", [], _replacing(
      "The 64% retention could not be verified from the distributed data; confirm it against the restricted source or state that it is not reproducible.",
-     "One value remains for you to confirm against the restricted source.")),
+     "One value remains for you to confirm against the restricted source."), 1),
     ("absence terms removed from the gate report", "mock_gate.md", ["--gate"],
-     _absence_words_removed),
+     _absence_words_removed, 1),
+    ("absence language only for a different file", "mock_gate.md", ["--gate"],
+     _absence_decoupled, 1),
+    # gate-compliant negated verdicts are prose the live runs produced,
+    # not asserted classifications — they must NOT fail the report
+    ("negated verdict sentence appended", "mock_gate.md", ["--gate"],
+     lambda t: t + "\nThe reported 40 workers value is unverifiable, "
+                   "not a match or mismatch after the failed gate.\n", 0),
 ]
 
 
 def md_mutation_cases():
     failures = 0
-    for label, mock, extra, transform in MD_MUTATIONS:
+    for label, mock, extra, transform, want in MD_MUTATIONS:
         text = (TESTS / mock).read_text()
         mutated = transform(text)
         assert mutated != text, f"{mock} text changed; update MD_MUTATIONS ({label})"
@@ -167,9 +186,9 @@ def md_mutation_cases():
         f.close()
         proc = run_grader("grade_report.py", extra, Path(f.name))
         Path(f.name).unlink()
-        ok = proc.returncode == 1
+        ok = proc.returncode == want
         print(f"{'PASS' if ok else 'FAIL'}  grade_report.py {' '.join(extra)} {mock} with {label}: "
-              f"exit {proc.returncode}, want 1")
+              f"exit {proc.returncode}, want {want}")
         if not ok:
             print(proc.stdout)
             failures += 1

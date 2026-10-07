@@ -164,11 +164,12 @@ def grade_top_level(g, report, expected):
                           or not r.get("producing_command")))]
     g.check(not bad_shape, "conditional fields match each record's classification",
             f"malformed records: {bad_shape[:3]}" if bad_shape else "")
-    # the environment field must name the actual runtime, not a
-    # placeholder: "unknown" supports no reproduction
+    # the environment field must name the actual, versioned runtime —
+    # "unknown" or a bare "python" supports no reproduction
     env = str(report.get("environment", "")).lower()
-    g.check("python" in env, "environment names the interpreter",
-            "" if "python" in env else repr(env)[:60])
+    versioned = bool(re.search(r"python\s*[0-9]", env))
+    g.check(versioned, "environment names a versioned interpreter",
+            "" if versioned else repr(env)[:60])
     # a location must name a section-level place the author can look up —
     # the bare word "manuscript" locates nothing in a document that
     # repeats numbers across sections. The keyed section itself is not
@@ -202,11 +203,16 @@ def grade_targets(report, expected):
     g.check(ok, "data_versions carries the real workers.csv digest",
             "" if ok else f"entries: {[e[:50] for e in entries]!r}")
 
-    # the documented RNG seed must appear in the report's provenance — the
-    # protocol logs it so the permutation result can be reproduced
+    # the documented RNG seed must appear in a provenance field — the
+    # protocol logs it so the permutation result can be reproduced, and a
+    # mention buried in a note is a remark, not provenance
     seed = str(expected.get("pipeline_seed", ""))
     if seed:
-        g.check(seed in json.dumps(report), "the pipeline seed appears in the provenance")
+        prov = " ".join(
+            [str(report.get("environment", "")), str(report.get("pipeline_command", ""))]
+            + [str(r.get("producing_command", "")) for r in values]
+            + [str(r.get("computed", "")) for r in values])
+        g.check(seed in prov, "the pipeline seed appears in the provenance fields")
 
     paired = set()
     for t in expected["targets"]:

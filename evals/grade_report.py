@@ -33,6 +33,13 @@ CLS_RE = {
     "unverifiable": re.compile(r"\bunverifiable\b|\b(cannot|could not|can['’]t) be verified\b|\bnot verifiable\b", re.I),
 }
 BOUNDARY_RE = re.compile(r"\bboundary\b|\btie\b|half[- ]even|\bendpoint\b", re.I)
+# a negated verdict ("unverifiable, not a match or mismatch" — phrasing a
+# live run produced) is gate-compliant prose, not an asserted
+# classification; strip it before classifying so the one remaining
+# verdict scan does not false-fail reports that follow the gate contract
+NEG_VERDICT_RE = re.compile(
+    r"\b(?:not|neither|no|never)\b(?:\s+\w+){0,3}?\s+(?:a\s+|an\s+)?(?:mis)?match(?:es|ed)?"
+    r"(?:\s+(?:or|nor)\s+(?:a\s+|an\s+)?(?:mis)?match(?:es|ed)?)?", re.I)
 SECTIONS = ("scope and gate", "method and provenance", "results", "author decisions")
 
 
@@ -69,12 +76,13 @@ def assertions_for(lines, anchors):
     """Classifications asserted near a target's anchors (gate mode only,
     where any match/mismatch at all is the failure being looked for)."""
     hits = anchor_lines(lines, anchors)
-    line_level = set().union(*(classify_text(lines[i]) for i in hits)) if hits else set()
+    stripped = [NEG_VERDICT_RE.sub(" ", ln) for ln in lines]
+    line_level = set().union(*(classify_text(stripped[i]) for i in hits)) if hits else set()
     if line_level:
         return line_level
     windowed = set()
     for i in hits:
-        windowed |= classify_text("\n".join(lines[max(0, i - WINDOW):i + WINDOW + 1]))
+        windowed |= classify_text("\n".join(stripped[max(0, i - WINDOW):i + WINDOW + 1]))
     return windowed
 
 
@@ -119,17 +127,24 @@ def grade_targets(report, expected):
 def grade_gate(report, expected):
     gc = expected["gate_case"]
     ok = grade_sections(report)
+    # the absence language must sit WITH the removed input: a report
+    # saying the required file is available while some other file is
+    # missing must not pass on two independent substring hits
+    lower_lines = [ln.lower() for ln in report.splitlines()]
+    terms = [p.lower() for p in gc["report_must_contain_any"]]
     for name in gc["report_must_name"]:
-        if name.lower() in report.lower():
-            print(f"PASS  gate: report names {name}")
-        else:
+        idxs = [i for i, ln in enumerate(lower_lines) if name.lower() in ln]
+        if not idxs:
             print(f"FAIL  gate: report never names {name}")
             ok = False
-    if any(p.lower() in report.lower() for p in gc["report_must_contain_any"]):
-        print("PASS  gate: report states the input is missing/unreachable")
-    else:
-        print(f"FAIL  gate: none of {gc['report_must_contain_any']} appear")
-        ok = False
+            continue
+        print(f"PASS  gate: report names {name}")
+        if any(any(t in "\n".join(lower_lines[max(0, i - 2):i + 3]) for t in terms)
+               for i in idxs):
+            print(f"PASS  gate: absence stated with {name}")
+        else:
+            print(f"FAIL  gate: none of {gc['report_must_contain_any']} appear near {name}")
+            ok = False
     lines = report.splitlines()
     for t in expected["targets"]:
         asserted = assertions_for(lines, t["anchors"]) - {"unverifiable"}
