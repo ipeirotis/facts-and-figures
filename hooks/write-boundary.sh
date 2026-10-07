@@ -79,19 +79,31 @@ def roots_above(p):
 # ascended roots rather than replaced by them: a project that is not a
 # git repository must not lose its own candidacy to a .git-bearing
 # ancestor
+# candidates feed marker selection and bootstrap validation; roots
+# additionally constrain the proposal allowance below. The environment
+# project dir and every marker or .git ancestor are roots; the RAW
+# payload cwd is a candidate but NOT a root — a session that has
+# entered the proposal directory must not have that directory rejected
+# as a proposal for containing the cwd
 candidates = []
-for c in (os.environ.get("CLAUDE_PROJECT_DIR") or "", payload.get("cwd") or ""):
-    if not c:
+roots = []
+env_c = os.environ.get("CLAUDE_PROJECT_DIR") or ""
+cwd_c = payload.get("cwd") or ""
+if not env_c and not cwd_c:
+    cwd_c = os.getcwd()
+for raw, is_root in ((env_c, True), (cwd_c, False)):
+    if not raw:
         continue
-    c = os.path.realpath(c)
-    for cand in [c] + roots_above(c):
+    c = os.path.realpath(raw)
+    above = roots_above(c)
+    for cand in [c] + above:
         if cand not in candidates:
             candidates.append(cand)
-if not candidates:
-    c = os.path.realpath(os.getcwd())
-    for cand in [c] + roots_above(c):
-        if cand not in candidates:
-            candidates.append(cand)
+    for r in ([c] if is_root else []) + above:
+        if r not in roots:
+            roots.append(r)
+if not roots:
+    roots = candidates[:1]
 # with runs armed concurrently in separate checkouts (the documented
 # parallel mode), the payload cwd names which run this write belongs
 # to: always picking the first marked candidate would judge a worktree
@@ -168,7 +180,11 @@ if not os.path.lexists(marker):
     # directory starts fresh
     for c in candidates:
         cm = os.path.join(c, "facts-and-figures-out", ".active")
-        if lexical != cm or os.path.realpath(cm) != cm:
+        cm_real = os.path.realpath(cm)
+        # the validation applies by either spelling: a write through an
+        # alias symlink to the REAL marker directory resolves to the
+        # canonical marker and must not skip the fresh-directory rule
+        if cm_real != cm or (lexical != cm and resolved != cm):
             continue
         lines = str(tool_input.get("content") or "").splitlines()
         line = lines[0].strip() if lines else ""
@@ -237,13 +253,14 @@ def multi_linked(path):
 
 
 # a directory is a safe allowance only if it neither equals nor
-# contains ANY candidate root, not just the selected project: a planted
-# ancestor marker naming the checkout directory as its proposal line
-# would otherwise whitelist the entire checkout — the checkout is a
-# candidate, but it is not the selected project once the ancestor
-# marker wins the selection
+# contains ANY root, not just the selected project: a planted ancestor
+# marker naming the checkout directory as its proposal line would
+# otherwise whitelist the entire checkout — the checkout is a root,
+# but it is not the selected project once the ancestor marker wins the
+# selection. Judged against roots, not raw candidates, so a cwd inside
+# the active proposal directory does not reject that very proposal
 def safe_root(cand):
-    return all(cand != r and not under(r, cand) for r in candidates)
+    return all(cand != r and not under(r, cand) for r in roots)
 
 
 # the proposal allowance must also resolve to its own lexical path: a

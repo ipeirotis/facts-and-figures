@@ -434,6 +434,36 @@ def main():
         check("bootstrap marker naming an empty directory: allowed",
               write_payload(p8, p8 / "facts-and-figures-out" / ".active",
                             content="empty-out\n"), p8, want_deny=False)
+        # a write through an alias symlink to the REAL marker directory
+        # resolves to the canonical marker — the fresh-directory
+        # validation must apply by that spelling too
+        p9 = Path(home_base) / "paper9"
+        (p9 / "facts-and-figures-out").mkdir(parents=True)
+        (p9 / "alias").symlink_to(p9 / "facts-and-figures-out")
+        (p9 / "data").mkdir()
+        (p9 / "data" / "workers.csv").write_text("id\n1\n")
+        check("alias to real marker dir, naming data: denied",
+              write_payload(p9, p9 / "alias" / ".active", content="data\n"),
+              p9, want_deny=True)
+        check("alias to real marker dir, naming a fresh directory: allowed",
+              write_payload(p9, p9 / "alias" / ".active", content="fresh9\n"),
+              p9, want_deny=False)
+
+        # a session that has entered the proposal directory must still
+        # be able to author files there: the raw cwd is a candidate for
+        # marker selection but not a root the proposal is judged against
+        p10 = Path(home_base) / "paper10"
+        (p10 / "facts-and-figures-out").mkdir(parents=True)
+        (p10 / "facts-and-figures-out" / ".active").touch()
+        (p10 / "manuscript.md").write_text("# Title\n")
+        check("cwd inside the proposal directory: report write allowed",
+              write_payload(p10 / "facts-and-figures-out",
+                            p10 / "facts-and-figures-out" / "verification-report.json"),
+              p10, want_deny=False)
+        check("cwd inside the proposal directory: manuscript still denied",
+              write_payload(p10 / "facts-and-figures-out", p10 / "manuscript.md"),
+              p10, want_deny=True)
+
         # an unlistable named directory may still hold writable files —
         # the inspection failure must count as occupied. Root bypasses
         # directory permission bits, so this case is only testable
