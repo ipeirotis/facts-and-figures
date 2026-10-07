@@ -35,6 +35,15 @@ CLS_RE = {
     "unverifiable": re.compile(r"\bunverifiable\b|\b(cannot|could not|can['’]t) be verified\b|\bnot verifiable\b", re.I),
 }
 BOUNDARY_RE = re.compile(r"\bboundary\b|\btie\b|half[- ]even|\bendpoint\b", re.I)
+# a negated boundary phrase ("is not a rounding boundary or tie") denies
+# the disclosure its words would otherwise satisfy; stripped before the
+# scan, with the or/nor continuation absorbed so "or tie" cannot survive
+# the stripped negation
+NEG_BOUNDARY_RE = re.compile(
+    r"\b(?:not|no|never|isn[’']?t|wasn[’']?t)\s+(?:a\s+|an\s+|the\s+)?(?:\w+\s+){0,2}?"
+    r"(?:boundary|tie|endpoint)\b"
+    r"(?:\s*(?:,|or|nor)\s*(?:a\s+|an\s+|the\s+)?(?:\w+\s+){0,2}?(?:boundary|tie|endpoint)\b)*",
+    re.I)
 # a negated verdict ("unverifiable, not a match or mismatch" — phrasing a
 # live run produced) is gate-compliant prose, not an asserted
 # classification; strip it before classifying so the one remaining
@@ -151,7 +160,8 @@ def grade_targets(report, expected):
             # value: a boundary word about some other target is not the
             # required tie disclosure
             anchored = any(
-                BOUNDARY_RE.search("\n".join(dlines[max(0, i - 1):i + 2]))
+                BOUNDARY_RE.search(
+                    NEG_BOUNDARY_RE.sub(" ", "\n".join(dlines[max(0, i - 1):i + 2])))
                 for i in anchor_lines(dlines, t["anchors"]))
             if anchored:
                 print(f"PASS  {t['id']}: boundary case raised with this value in Author decisions")

@@ -27,7 +27,6 @@ from pathlib import Path
 
 EVALS = Path(__file__).resolve().parent
 SCHEMA = "facts-and-figures.verification/1"
-EPS = 1e-6
 
 RECORD_REQUIRED = {"location", "reported", "classification"}
 
@@ -55,6 +54,14 @@ def names_input(key, want):
 NEG_ABSENCE_RE = re.compile(
     r"\b(?:not|no longer|no|never|isn.?t|wasn.?t|aren.?t|weren.?t)\s+"
     r"(?:missing|unavailable|unreachable|absent|removed)\b")
+
+# a gate reason crediting the gate or the pipeline with success
+# contradicts the unverifiable classification it sits on, whatever
+# vocabulary it also carries. Adjacency keeps negations safe: "the gate
+# never passed" does not match
+GATE_SUCCESS_RE = re.compile(
+    r"\b(?:gate|pipeline|run|computation|check)s?\s+(?:succeeded|passed)\b"
+    r"|\bvalue\s+is\s+valid\b")
 TOP_REQUIRED = ("schema", "skill_version", "manuscript_files", "pipeline_command",
                 "environment", "data_versions", "values")
 
@@ -86,6 +93,14 @@ def pair_records(values, anchors):
             if any(rx.search(str(r.get("reported", "")).lower()) for rx in rxs)]
 
 
+def close(c, t):
+    """Equality up to float summation noise (~1e-13) and JSON round-trip,
+    SCALED: a fixed absolute epsilon would let a small value hide a
+    materially different one — a permutation p-value 0.9% off sat within
+    1e-6 of the documented 9.999e-05."""
+    return abs(c - t) <= 1e-9 + 1e-9 * abs(t)
+
+
 def computed_matches(computed, target):
     """The record's computed value must equal the documented true value; a
     percent target may be recorded in either unit (0.125 or 12.5). A record
@@ -99,7 +114,7 @@ def computed_matches(computed, target):
         true_candidates.append(target["true_value"] / target["result_scale"])
 
     def is_true(c):
-        return isinstance(c, (int, float)) and any(abs(c - t) < EPS for t in true_candidates)
+        return isinstance(c, (int, float)) and any(close(c, t) for t in true_candidates)
 
     expect = target.get("bundle_expect")
     if expect is not None and not isinstance(computed, (list, tuple)):
@@ -117,14 +132,14 @@ def computed_matches(computed, target):
             remaining = list(expect)
             for c in computed:
                 hit = next((i for i, e in enumerate(remaining)
-                            if isinstance(c, (int, float)) and abs(c - e) < EPS), None)
+                            if isinstance(c, (int, float)) and close(c, e)), None)
                 if hit is None:
                     return False
                 remaining.pop(hit)
             return True
         allowed = true_candidates + list(target.get("bundle_allowed", []))
         def is_allowed(c):
-            return isinstance(c, (int, float)) and any(abs(c - a) < EPS for a in allowed)
+            return isinstance(c, (int, float)) and any(close(c, a) for a in allowed)
         return bool(computed) and any(is_true(c) for c in computed) and all(is_allowed(c) for c in computed)
     return is_true(computed)
 
@@ -386,15 +401,21 @@ def grade_gate(report, expected):
     # unverifiable classification it sits on. A record may cite its own
     # missing source (the undistributed wave-2 file) rather than the
     # removed input, so absence vocabulary or the removed name both count
-    gate_words = ("gate", "missing", "not found", "unavailable", "unreachable",
-                  "absent", "removed", "not distributed", "did not run",
-                  "never ran", "could not")
+    # the bare word "gate" is auto-satisfied by compliant phrasing in
+    # either direction — "gate passed; the value is valid" wore it — so
+    # only the failure collocations count as gate vocabulary
+    gate_words = ("failed gate", "gate failed", "gate failure", "missing",
+                  "not found", "unavailable", "unreachable", "absent",
+                  "removed", "not distributed", "did not run", "never ran",
+                  "could not")
     removed = [norm_path(n).lower() for n in expected["gate_case"]["remove"]]
-    # a reason that DENIES the absence fails outright, whatever else it
-    # names: "workers.csv is not missing" would otherwise pass on the
-    # basename alone
+    # a reason that DENIES the absence or CREDITS the gate with success
+    # fails outright, whatever else it names: "workers.csv is not
+    # missing" and "gate passed for workers.csv" would otherwise pass on
+    # the basename alone
     bad_reasons = [str(r.get("reason"))[:60] for r in values
                    if NEG_ABSENCE_RE.search(str(r.get("reason", "")).lower())
+                   or GATE_SUCCESS_RE.search(str(r.get("reason", "")).lower())
                    or (not any(w in str(r.get("reason", "")).lower() for w in gate_words)
                        and not any(n.split("/")[-1] in str(r.get("reason", "")).lower()
                                    for n in removed))]

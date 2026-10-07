@@ -170,6 +170,20 @@ MUTATIONS = [
      lambda d: d["data_versions"].update(
          {"data/workers.csv": d["data_versions"]["data/workers.csv"]
           + " (10,000 rows)"}), 0),
+    # the bare word "gate" must not whitelist a reason crediting the
+    # gate with success
+    ("gate reasons crediting a passed gate", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="gate passed; the pipeline succeeded "
+                                "and this value is valid")
+                for r in d["values"]], 1),
+    # ...while naming the FAILED gate remains sufficient vocabulary
+    ("gate reasons naming the failed gate", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="verification stopped at the failed gate")
+                for r in d["values"]], 0),
+    # a p-value 0.9% off sat inside the old absolute epsilon
+    ("permutation p-value off by one percent", [], "mock_good.json",
+     lambda d: [r.update(computed=0.00010089990009990002) for r in d["values"]
+                if r.get("reported") == "p < 0.001"], 1),
 ]
 
 
@@ -247,6 +261,11 @@ MD_MUTATIONS = [
          "input data/workers.csv is not missing; it is present and verified")
      .replace("required input not found: data/workers.csv",
               "input check: data/workers.csv is not missing"), 1),
+    # prose DENYING the tie must not satisfy the boundary disclosure on
+    # the strength of the words it negates
+    ("negated boundary disclosure", "mock_good.md", [], _replacing(
+     "The flagged share sits exactly on the rounding boundary; confirm the intended convention.",
+     "The flagged share is not a rounding boundary or tie; no decision is needed."), 1),
 ]
 
 
