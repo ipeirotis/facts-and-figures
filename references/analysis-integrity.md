@@ -195,6 +195,14 @@ Compare, value by value, and classify each as one of:
   report. The lower magnitude endpoint is included, since `1.245` displays as
   `1.25` under half-up.
 
+  Compare in the manuscript's display unit. When the manuscript shows a
+  scaled unit and the pipeline emits the underlying value, convert `v` into
+  the displayed unit before applying the interval (×100 for a percentage,
+  ×10,000 for basis points, ÷10^6 for a value labeled in millions), never
+  `m` or `u`, and log the conversion: a reported `7%` against a computed
+  `0.071` compares `7.1` with `[6.5, 7.5)`. A unit the manuscript does not
+  state is a question for the author, not a guess.
+
   A value landing exactly on either endpoint is a tie, and a tie is the one
   case where the two conventions disagree: `1.245` displays as `1.24` under
   half-even, which most numerical libraries use by default. Do not resolve

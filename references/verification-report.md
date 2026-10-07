@@ -52,8 +52,12 @@ the absence where there is nothing to hash.
 Top level, all required: `schema` (exactly `facts-and-figures.verification/1`),
 `skill_version`, `manuscript_files`, `pipeline_command`, `environment`,
 `data_versions`, `values`. Paths in `manuscript_files` and the keys of
-`data_versions` are repository-relative (`data/workers.csv`), the spelling
-the author's repository uses — never absolute container paths.
+`data_versions` for local files are repository-relative (`data/workers.csv`),
+the spelling the author's repository uses — never absolute container paths.
+A remote input is keyed by the canonical identifier of what was actually
+read, pin included (`bq://project.dataset.table_snapshot`,
+`gs://bucket/path#generation`), never by the local config file that names
+it (`references/compute-environment.md` owns the pin).
 
 Each record in `values` carries one manuscript value:
 

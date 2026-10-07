@@ -196,7 +196,7 @@ jobs:
       - name: fail on mismatches
         run: |
           python3 -c "
-          import json, sys
+          import json, math, sys
           r = json.load(open('facts-and-figures-out/verification-report.json'))
           # shape before policy: a malformed companion must not pass the
           # gate on records that carry a classification and nothing else,
@@ -215,7 +215,9 @@ jobs:
               print('malformed report:', missing or 'no value records'); sys.exit(1)
           # computed must be a number, or a non-empty numeric array for a
           # bundled claim — an empty object is a value no consumer can read
-          def num(x): return isinstance(x, (int, float)) and not isinstance(x, bool)
+          # json.load accepts NaN and Infinity, so finiteness is checked too
+          def num(x): return (isinstance(x, (int, float)) and not isinstance(x, bool)
+                              and math.isfinite(x))
           def numeric(x): return num(x) or (isinstance(x, list) and x
                                             and all(num(c) for c in x))
           shapeless = [v for v in vals
