@@ -70,12 +70,13 @@ cwd = payload.get("cwd") or project
 resolved = os.path.realpath(os.path.join(cwd, os.path.expanduser(target)))
 
 allowed = []
-# a proposal directory is allowed unless it equals or contains the
-# project, where a path like ".." would whitelist the whole tree; the
-# default marker directory stays writable alongside a custom proposal
-for cand in (proposal, default_dir):
-    if cand != project and not project.startswith(cand + os.sep):
-        allowed.append(cand)
+# the proposal directory is allowed unless it equals or contains the
+# project, where a path like ".." would whitelist the whole tree; under a
+# custom proposal, only the marker file itself stays writable in the
+# default directory, so generated work cannot land outside the directory
+# the author chose
+if proposal != project and not project.startswith(proposal + os.sep):
+    allowed.append(proposal)
 for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
     if not scratch:
         continue
@@ -88,6 +89,8 @@ for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
         continue
     allowed.append(root)
 
+if resolved == os.path.realpath(marker):
+    sys.exit(0)
 for root in allowed:
     if resolved == root or resolved.startswith(root + os.sep):
         sys.exit(0)

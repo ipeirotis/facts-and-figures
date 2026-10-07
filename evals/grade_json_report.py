@@ -100,12 +100,18 @@ class Grader:
         self.ok = self.ok and bool(cond)
 
 
-def grade_top_level(g, report):
+def grade_top_level(g, report, expected):
     for key in TOP_REQUIRED:
         v = report.get(key)
         good = v == SCHEMA if key == "schema" else bool(v)
         g.check(good, f"top-level {key} present and non-empty",
                 "" if good else repr(v)[:60])
+    want_files = expected.get("manuscript_files")
+    if want_files:
+        got = report.get("manuscript_files")
+        g.check(sorted(map(str, got or [])) == sorted(want_files),
+                "manuscript_files names the scoped manuscript",
+                "" if sorted(map(str, got or [])) == sorted(want_files) else repr(got)[:60])
     values = report.get("values") or []
     bad = [i for i, r in enumerate(values)
            if any(not str(r.get(k) or "").strip() for k in RECORD_REQUIRED)]
@@ -116,7 +122,7 @@ def grade_top_level(g, report):
 
 def grade_targets(report, expected):
     g = Grader()
-    values = grade_top_level(g, report)
+    values = grade_top_level(g, report, expected)
 
     # the data provenance must identify the actual fixture input, not an
     # invented file or digest — the workspaces are byte copies, so the
@@ -180,7 +186,7 @@ def grade_targets(report, expected):
 
 def grade_gate(report, expected):
     g = Grader()
-    values = grade_top_level(g, report)
+    values = grade_top_level(g, report, expected)
     paired = set()
     for t in expected["targets"]:
         recs = pair_records(values, t["anchors"])

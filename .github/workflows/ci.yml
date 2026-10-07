@@ -26,8 +26,8 @@ jobs:
       - name: check version consistency
         run: |
           v="$(cat VERSION)"
-          grep -q "version: \"$v\"" SKILL.md || { echo "SKILL.md metadata.version != VERSION ($v)"; exit 1; }
-          grep -q "\"version\": \"$v\"" .claude-plugin/plugin.json || { echo "plugin.json version != VERSION ($v)"; exit 1; }
+          grep -qF "version: \"$v\"" SKILL.md || { echo "SKILL.md metadata.version != VERSION ($v)"; exit 1; }
+          grep -qF "\"version\": \"$v\"" .claude-plugin/plugin.json || { echo "plugin.json version != VERSION ($v)"; exit 1; }
 
   plugin-validate:
     name: validate plugin manifests

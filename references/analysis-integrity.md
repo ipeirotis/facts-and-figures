@@ -20,7 +20,10 @@ sit in the working tree: a repository whose pipeline reads a BigQuery table
 it is configured for passes, and a repository whose data path resolves to
 nothing you can read fails no matter what the tree contains. Configured but
 unreachable is a gate failure, not an invitation to substitute another
-source: say which input could not be reached and stop.
+source: say which input could not be reached and stop. An input the
+pipeline itself treats as optional — execution completes and the affected
+quantities are reported as unavailable — fails only those values, which
+are classified unverifiable; it does not fail the whole gate.
 
 The two generative capabilities (figures, new analyses) additionally need a
 write tool to author new scripts and render new outputs. When any required tool or input is missing, do not fake the pass: name the

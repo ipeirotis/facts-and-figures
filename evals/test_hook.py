@@ -93,6 +93,10 @@ def main():
               write_payload(proj, proj / "custom-out" / "s.py"), proj, want_deny=False)
         check("marker naming custom-out: manuscript write denied",
               write_payload(proj, proj / "manuscript.md"), proj, want_deny=True)
+        check("marker naming custom-out: default-directory write denied",
+              write_payload(proj, proj / "facts-and-figures-out" / "r.json"), proj, want_deny=True)
+        check("marker naming custom-out: the marker file itself stays writable",
+              write_payload(proj, marker), proj, want_deny=False)
         marker.write_text("")
 
         # a scratch root inside the project must not whitelist author files
