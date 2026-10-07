@@ -45,6 +45,16 @@ def names_input(key, want):
     nk = norm_path(key).lower()
     want = want.lower()
     return nk == want or (nk.startswith("/") and nk.endswith("/" + want))
+
+
+# an absence token inside a negation is a presence claim wearing the
+# vocabulary: "not missing; present and verified" carries the token
+# while denying the absence the check exists to require. Only the bare
+# adjectives appear here — "not found", "not distributed", "did not
+# run" and "could not" are themselves absence idioms and must survive
+NEG_ABSENCE_RE = re.compile(
+    r"\b(?:not|no longer|no|never|isn.?t|wasn.?t|aren.?t|weren.?t)\s+"
+    r"(?:missing|unavailable|unreachable|absent|removed)\b")
 TOP_REQUIRED = ("schema", "skill_version", "manuscript_files", "pipeline_command",
                 "environment", "data_versions", "values")
 
@@ -373,10 +383,14 @@ def grade_gate(report, expected):
                   "absent", "removed", "not distributed", "did not run",
                   "never ran", "could not")
     removed = [norm_path(n).lower() for n in expected["gate_case"]["remove"]]
+    # a reason that DENIES the absence fails outright, whatever else it
+    # names: "workers.csv is not missing" would otherwise pass on the
+    # basename alone
     bad_reasons = [str(r.get("reason"))[:60] for r in values
-                   if not any(w in str(r.get("reason", "")).lower() for w in gate_words)
-                   and not any(n.split("/")[-1] in str(r.get("reason", "")).lower()
-                               for n in removed)]
+                   if NEG_ABSENCE_RE.search(str(r.get("reason", "")).lower())
+                   or (not any(w in str(r.get("reason", "")).lower() for w in gate_words)
+                       and not any(n.split("/")[-1] in str(r.get("reason", "")).lower()
+                                   for n in removed))]
     g.check(not bad_reasons, "every reason explains an absence or the failed gate",
             f"reasons: {bad_reasons[:2]}" if bad_reasons else "")
     # provenance for the removed input must record its absence — the
@@ -392,9 +406,12 @@ def grade_gate(report, expected):
         faked = [e for e in entries if re.search(r"[0-9a-f]{40,}", e.lower())]
         g.check(not faked, f"gate: no digest asserted for removed input {name}",
                 f"entries: {faked}" if faked else "")
+        # negated tokens are stripped before the scan, so "not missing;
+        # present and verified" cannot satisfy the absence requirement
+        # on the strength of the token it negates
         absent_ok = bool(entries) and all(
             re.search(r"absent|missing|not found|unavailable|unreachable|removed|no such",
-                      e.lower()) for e in entries)
+                      NEG_ABSENCE_RE.sub(" ", e.lower())) for e in entries)
         g.check(absent_ok, f"gate: data_versions records {name} as absent",
                 f"entries: {entries}" if not absent_ok else "")
     text = json.dumps(report).lower()

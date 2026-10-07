@@ -47,20 +47,44 @@ tool = payload.get("tool_name", "")
 if tool not in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
     sys.exit(0)
 
+# a candidate may be a subdirectory rather than a root: the payload cwd
+# follows the session into any directory it changes into, and judging
+# the marker against <root>/analysis/facts-and-figures-out would read an
+# armed tree as unarmed. Ascend to the nearest ancestor holding a marker
+# or a .git entry (a linked worktree carries .git as a file); with
+# neither anywhere above, keep the path as given
+def rootof(p):
+    cur = p
+    while True:
+        if (os.path.lexists(os.path.join(cur, "facts-and-figures-out", ".active"))
+                or os.path.lexists(os.path.join(cur, ".git"))):
+            return cur
+        nxt = os.path.dirname(cur)
+        if nxt == cur:
+            return p
+        cur = nxt
+
+
 # prefer the root whose marker exists: in a linked worktree the
 # CLAUDE_PROJECT_DIR environment variable stays at the original checkout
 # while the session works in — and creates its marker in — the worktree
 # the payload cwd names; judging only the original root would leave the
-# worktree manuscript unguarded
+# worktree manuscript unguarded. Each path is kept alongside its
+# ascended root rather than replaced by it: a project that is not a git
+# repository must not lose its own candidacy to a .git-bearing ancestor
 candidates = []
 for c in (os.environ.get("CLAUDE_PROJECT_DIR") or "", payload.get("cwd") or ""):
     if not c:
         continue
     c = os.path.realpath(c)
-    if c not in candidates:
-        candidates.append(c)
+    for cand in (c, rootof(c)):
+        if cand not in candidates:
+            candidates.append(cand)
 if not candidates:
-    candidates.append(os.path.realpath(os.getcwd()))
+    c = os.path.realpath(os.getcwd())
+    for cand in (c, rootof(c)):
+        if cand not in candidates:
+            candidates.append(cand)
 project = candidates[0]
 for c in candidates:
     if os.path.lexists(os.path.join(c, "facts-and-figures-out", ".active")):

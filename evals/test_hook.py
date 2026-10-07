@@ -300,6 +300,27 @@ def main():
         check("worktree bootstrap, symlinked root: unrelated write allowed",
               write_payload(w2, w2 / "notes.md"), o2, want_deny=False)
 
+        # the payload cwd follows the session into subdirectories (cd
+        # analysis): the guard must ascend to the worktree root instead
+        # of reading <wt>/analysis as an unarmed project
+        (wproj / "analysis").mkdir()
+        check("nested worktree cwd: outside write denied",
+              write_payload(wproj / "analysis", wproj / "manuscript.md"), oproj,
+              want_deny=True)
+        check("nested worktree cwd: proposal write allowed",
+              write_payload(wproj / "analysis",
+                            wproj / "facts-and-figures-out" / "s.py"), oproj,
+              want_deny=False)
+        # the unarmed bootstrap validation must also reach the root the
+        # nested cwd ascends to — identified by the .git file a linked
+        # worktree carries, since no marker exists yet
+        (w2 / "analysis").mkdir()
+        (w2 / ".git").write_text("gitdir: elsewhere\n")
+        check("nested worktree bootstrap, symlinked root: marker write denied",
+              write_payload(w2 / "analysis",
+                            w2 / "facts-and-figures-out" / ".active"), o2,
+              want_deny=True)
+
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)
         check("TMPDIR inside project: data write still denied",

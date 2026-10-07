@@ -82,8 +82,13 @@ missing input named.
 `.github/workflows/ci.yml` runs the deterministic layer plus the repo's
 consistency checks on every push and pull request. `.github/workflows/agent-eval.yml`
 runs the full agent eval on pushes to `main` that touch the skill's runtime
-files (and on manual dispatch); it needs the `ANTHROPIC_API_KEY` repository
-secret and skips with a notice when the secret is absent.
+files (and on manual dispatch); it needs the `ANTHROPIC_API_KEY` secret and
+skips with a notice when the secret is absent. The job is bound to the
+`agent-eval` deployment environment: store the key as an environment secret
+there, and if the repository has collaborators, use the environment's
+protection rules (deployment branch policy or required reviewers) to keep a
+manual dispatch from an unreviewed branch away from the key — a plain
+repository secret would reach any branch anyone with write access dispatches.
 
 ## Honesty notes
 

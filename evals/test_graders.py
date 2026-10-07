@@ -147,6 +147,18 @@ MUTATIONS = [
                                    "reported": "0-100 scale",
                                    "classification": "unverifiable",
                                    "reason": "the scale is not a pipeline output"}), 1),
+    # a negated absence token is a presence claim wearing the vocabulary
+    ("negated absence recorded for removed input", ["--gate"], "mock_gate.json",
+     lambda d: d["data_versions"].update(
+         {"data/workers.csv": "not missing; present and verified"}), 1),
+    ("gate reason denying the absence by name", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="data/workers.csv is not missing; the value stands")
+                for r in d["values"]], 1),
+    # ...but "not found" is itself an absence idiom and must keep passing
+    ("gate reasons using the not-found idiom", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="input data/workers.csv was not found; "
+                                "the pipeline could not run")
+                for r in d["values"]], 0),
 ]
 
 

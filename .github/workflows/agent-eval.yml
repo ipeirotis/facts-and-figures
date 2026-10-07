@@ -2,7 +2,8 @@ name: agent-eval
 
 # End-to-end eval: headless Claude Code verifies the fixture paper repo and
 # the reports are graded against the answer key. Requires the
-# ANTHROPIC_API_KEY repository secret; without it the job skips with a
+# ANTHROPIC_API_KEY secret in the agent-eval deployment environment (a
+# plain repository secret also resolves); without it the job skips with a
 # notice instead of failing every push.
 
 on:
@@ -26,6 +27,13 @@ jobs:
   agent-eval:
     name: headless eval against the fixture
     runs-on: ubuntu-latest
+    # workflow_dispatch lets anyone with write access run the checked-out
+    # eval script — from any branch — with the API key in its reach.
+    # Binding the job to a deployment environment puts that under the
+    # environment's protection rules: store the key as an environment
+    # secret and restrict the environment to main (or require reviewers)
+    # if the repository has collaborators whose branches should not see it
+    environment: agent-eval
     steps:
       - uses: actions/checkout@v4
         with:

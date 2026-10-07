@@ -5,12 +5,22 @@ on:
     branches: [main]
   pull_request:
 
+# the jobs execute pull-request code (the eval scripts under test); they
+# need no write token, and an org-level default of contents: write must
+# not reach them
+permissions:
+  contents: read
+
 jobs:
   fixture-check:
     name: deterministic fixture check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the checked-out scripts run in later steps; they must not
+          # inherit a usable token from .git/config
+          persist-credentials: false
       - name: run the fixture self-check (no LLM)
         run: python3 evals/check_fixture.py
       - name: run the grader self-tests (no LLM)
@@ -42,6 +52,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
