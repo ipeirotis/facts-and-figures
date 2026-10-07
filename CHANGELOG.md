@@ -3,6 +3,16 @@
 All notable changes to facts-and-figures (called paper-analyst before v0.2.0) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versions use [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+Codex review findings on the skill as vendored into a manuscript repository (IliasTriant/inattentiveness_paper#14), each checked against the current text before fixing:
+
+- A verification pipeline that writes to the working tree no longer runs there after the author approves. `references/analysis-integrity.md` step 4 said to stop and ask, which implied approval licensed an in-place run, while the integrity norms say verification writes nothing of the author's. The run now goes, in order, to a read-only or dry-run path, an output location redirected into the proposal directory, or a disposable checkout there removed at teardown; with none possible, its values are unverifiable. The integrity norm names these as the only additions verification may author.
+- The rounding tolerance follows the last displayed digit, exponent included. `u = 10^-k` read `1.2 × 10^-4` as one decimal and accepted values orders of magnitude off; scientific notation now uses `u = 10^(e-k)`.
+- A BigQuery time-travel decorator no longer counts as a pinned data version by itself (`references/compute-environment.md`). It resolves only within the two-to-seven-day time-travel window, so the point it fixes must be preserved durably, as a table snapshot (with the author's go-ahead) or an archived export with its hash, or the result is unverifiable.
+
 ## [0.5.0] - 2026-10-07
 
 Completes the roadmap's items 4 and 5: the repository is now a Claude Code plugin, and verification is scriptable end to end. Minor bump: the output contract gains the machine-readable companion.

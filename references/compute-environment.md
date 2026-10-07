@@ -142,10 +142,17 @@ output location) plus:
   query, or run ID the service assigns. This is what lets the author or a
   reviewer find the run later.
 - **A pinned data snapshot.** A warehouse table is not a file: it can change
-  under a query, so "the table" is not a data version. Pin the read (a
-  BigQuery time-travel decorator or table snapshot, an object version or
-  generation on cloud storage, a partition key with a fixed as-of date) and
-  record the pin. Without one, report the result as unverifiable rather than
+  under a query, so "the table" is not a data version. Pin the read durably
+  (a BigQuery table snapshot, an object version or generation on cloud
+  storage, a partition key with a fixed as-of date) and record the pin. A
+  BigQuery time-travel decorator (`FOR SYSTEM_TIME AS OF`) is not a durable
+  pin on its own: it resolves only inside the dataset's time-travel window,
+  two to seven days, so a command logged with it alone stops reproducing
+  once the window closes. Use it to fix the read, then preserve that point
+  before the window closes: a table snapshot taken from it, written under
+  the output rule at the end of this file and with the author's go-ahead,
+  or an export of the rows read, archived in the proposal directory with its
+  hash. Without a durable pin, report the result as unverifiable rather than
   as verified, and say why.
 - **Commands with the secrets taken out.** A logged command is only useful
   if the author can paste it back, and only safe if it carries no secret. A

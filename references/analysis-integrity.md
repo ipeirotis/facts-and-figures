@@ -137,10 +137,20 @@ when the analysis code or data carry uncommitted changes, or the data is
 not versioned at all, say so and identify the actual inputs read (for
 example by file path and content hash), since a bare commit hash no longer
 reproduces the run. Prefer read-only execution. If the pipeline wants
-credentials or network access, would take very long, or would write to the
-working tree (overwrite outputs, rebuild generated tables or caches in
-place), stop and ask before running, or use a read-only or dry-run path
-when the pipeline offers one.
+credentials or network access, or would take very long, stop and ask before
+running.
+
+A pipeline that would write to the working tree (overwrite outputs, rebuild
+generated tables or caches in place) never runs there, approval or not:
+verification writes nothing of the author's (see the integrity norms
+below), and an author's go-ahead does not change that. Use, in order, a
+read-only or dry-run path the pipeline offers; an output location the
+pipeline lets you redirect into the proposal directory; or a disposable
+checkout inside the proposal directory (`git worktree add` at the logged
+commit, carrying over any uncommitted inputs the run reads, recorded by
+path and content hash), removed at teardown. Log which one ran. When none
+is possible, the values that run would produce are unverifiable: say why
+in `Author decisions` and do not run it.
 
 ### 5. Diff and report
 
@@ -166,8 +176,11 @@ Compare, value by value, and classify each as one of:
   rounding rule.
 
   Fix the tie convention with the tolerance, so "correctly rounded" cannot
-  mean two things. For a manuscript value `m` reported to `k` decimals, with
-  `u = 10^-k`, the accepted set is the half-open interval on magnitudes
+  mean two things. For a manuscript value `m`, let `u` be the place value of
+  its last displayed digit: `u = 10^-k` for a value reported to `k`
+  decimals, and `u = 10^(e-k)` for one in scientific notation with `k`
+  mantissa decimals and exponent `e`, so `1.2 × 10^-4` gives `u = 10^-5`,
+  never `10^-1`. The accepted set is the half-open interval on magnitudes
 
       |m| - u/2  <=  |v|  <  |m| + u/2,   with v of the same sign as m
 
@@ -306,7 +319,9 @@ These bind all three capabilities.
   write-boundary hook looks for it, carrying an author-named proposal
   directory as its single line (`SKILL.md` owns that lifecycle) — and the
   machine-readable companion (`references/verification-report.md`), which
-  lives in the selected proposal directory. The generative capabilities author new files only, a new
+  lives in the selected proposal directory, plus, for a pipeline that
+  writes, the redirected outputs or disposable checkout of step 4, also in
+  the proposal directory, with the checkout removed at teardown. The generative capabilities author new files only, a new
   plotting or analysis script and its outputs, in a clearly labeled proposal
   location (a directory the author names, or a `facts-and-figures-out/` scratch
   directory); the author's tracked files stay exactly as they were, and a
