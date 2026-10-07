@@ -29,6 +29,8 @@ Codex review findings on the skill as vendored into a manuscript repository (Ili
 - The run marker's exclusive create names `os.open(..., O_CREAT | O_EXCL)`, which fails on any existing node; Bash's `noclobber` refuses only regular files and blocks on a FIFO at the marker path.
 - An archived export of time-travel rows pins the data only when a logged command reruns the pipeline (or the producing step) against it; a pipeline hard-wired to the time-travel query needs the table snapshot.
 
+- `SKILL.md` places the run marker at the root of the repository being verified (the manuscript checkout or the linked worktree the run works in), never inside a nested repository such as a submodule, since the hook ascends from the working directory and a deeper marker goes unseen once the session returns to the root. Codex proposed enforcing this in the hook by requiring markers discoverable from `CLAUDE_PROJECT_DIR`; that would break runs in linked worktrees nested inside the checkout (Claude Code places worktrees under `.claude/worktrees/`), and a worktree and a submodule both carry `.git` as a file, so the author chose the protocol rule.
+
 ## [0.5.0] - 2026-10-07
 
 Completes the roadmap's items 4 and 5: the repository is now a Claude Code plugin, and verification is scriptable end to end. Minor bump: the output contract gains the machine-readable companion.
