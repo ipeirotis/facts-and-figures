@@ -65,6 +65,11 @@ Each record in `values` carries one manuscript value:
   valid.
 - `computed` (required for match and mismatch, `null` for unverifiable):
   the pipeline output at full precision, never rounded to make the point.
+  When the record's `reported` claim bundles several quantities in one
+  manuscript statement (a group split like "20 / 20", a count stated with
+  its seed), `computed` is an array carrying every bundled quantity — a
+  scalar verifies only one of them, and a record claiming the whole
+  bundle must verify the whole bundle.
 - `tolerance` (required for match and mismatch of point values): the
   accepted interval or predicate, fixed before comparison, stated so a
   reader can recheck the classification from `reported` and `computed`
