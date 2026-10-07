@@ -99,15 +99,20 @@ if not os.path.lexists(marker):
     # resolve to the marker path, or a default directory that is already
     # a symlink routes the marker creation into an author directory. The
     # check covers both spellings — the marker path itself, and a write
-    # addressed straight at the redirect target it resolves to
-    marker_real = os.path.realpath(marker)
-    if (lexical == marker or resolved == marker_real) and marker_real != marker:
-        deny(
-            "facts-and-figures write boundary: the marker path {m} does not resolve "
-            "to itself — facts-and-figures-out is a symlink, so creating the run "
-            "marker there would land outside the proposal directory. Replace "
-            "facts-and-figures-out with a real directory first.".format(m=marker)
-        )
+    # addressed straight at the redirect target it resolves to — and runs
+    # against EVERY candidate root, since with no marker anywhere the
+    # selected project is the environment root while the bootstrap may
+    # target the worktree the payload cwd names
+    for c in candidates:
+        cm = os.path.join(c, "facts-and-figures-out", ".active")
+        cm_real = os.path.realpath(cm)
+        if (lexical == cm or resolved == cm_real) and cm_real != cm:
+            deny(
+                "facts-and-figures write boundary: the marker path {m} does not "
+                "resolve to itself — facts-and-figures-out is a symlink, so creating "
+                "the run marker there would land outside the proposal directory. "
+                "Replace facts-and-figures-out with a real directory first.".format(m=cm)
+            )
     sys.exit(0)
 
 try:

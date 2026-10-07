@@ -86,7 +86,11 @@ def main():
         from grade_json_report import anchor_rx
         manuscript = (fixture / "manuscript.md").read_text().lower()
         for t in expected["targets"]:
-            probes = [str(t["manuscript_value"])] + list(t.get("anchors", []))
+            # value-bearing probes only: the keyed value and the anchors
+            # that carry a digit — a prose anchor like "flagged" survives
+            # any numeric drift and would bless a stale key
+            probes = [str(t["manuscript_value"])] + [
+                a for a in t.get("anchors", []) if any(c.isdigit() for c in a)]
             hit = any(anchor_rx(p).search(manuscript) for p in probes)
             check(hit, f"{t['id']}: manuscript still states the keyed value",
                   f"none of {probes[:3]}... found" if not hit else "")

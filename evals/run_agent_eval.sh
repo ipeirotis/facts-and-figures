@@ -215,7 +215,11 @@ claude CLI not found; run each case yourself, saving the agent's report,
 then apply the full grading and workspace-integrity suite. The scrub
 variable is part of each command because this script's own export dies
 with it — without the prefix, the pre-approved Bash commands would see
-your ANTHROPIC_API_KEY:
+your ANTHROPIC_API_KEY. Note: this manual mode runs WITHOUT the
+automatic branch's answer-key lockout — the key in evals/ stays
+readable to the session you drive — so treat results as debugging, not
+measurement, or chmod 000 the evals/ and git directories around each
+run yourself:
 
   cd "$WORK/verify" && CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1 claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > "$WORK/verify-report.md"
   cd "$WORK/gated" && CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1 claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > "$WORK/gated-report.md"

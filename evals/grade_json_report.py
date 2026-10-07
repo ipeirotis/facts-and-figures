@@ -66,8 +66,12 @@ def pair_records(values, anchors):
     schema requires `reported` to carry the manuscript value verbatim, so a
     record only locatable through its note or location is non-compliant —
     and an earlier free-text fallback let a record pair on a note mention
-    while asserting a different value in `reported`."""
-    rxs = [anchor_rx(a) for a in anchors]
+    while asserting a different value in `reported`. Pairing uses the
+    VALUE-bearing anchors where the target has them: a bare prose anchor
+    like "flagged" locates discussion lines for the prose grader, but a
+    reported field matching only it does not carry the manuscript value."""
+    value_anchors = [a for a in anchors if any(c.isdigit() for c in a)] or anchors
+    rxs = [anchor_rx(a) for a in value_anchors]
     return [r for r in values
             if any(rx.search(str(r.get("reported", "")).lower()) for rx in rxs)]
 

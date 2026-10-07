@@ -275,6 +275,24 @@ def main():
               write_payload(wproj, wproj / "facts-and-figures-out" / "s.py"), oproj,
               want_deny=False)
 
+        # the bootstrap validation must run against every candidate root:
+        # with no marker anywhere the selected project is the environment
+        # root, while the bootstrap may target a worktree whose default
+        # directory is already a symlink
+        o2 = Path(home_base) / "orig2"
+        (o2 / "facts-and-figures-out").mkdir(parents=True)
+        w2 = Path(home_base) / "wt2"
+        w2.mkdir()
+        (w2 / "data").mkdir()
+        (w2 / "facts-and-figures-out").symlink_to(w2 / "data")
+        check("worktree bootstrap, symlinked root: marker write denied",
+              write_payload(w2, w2 / "facts-and-figures-out" / ".active"), o2,
+              want_deny=True)
+        check("worktree bootstrap, symlinked root: resolved-path write denied",
+              write_payload(w2, w2 / "data" / ".active"), o2, want_deny=True)
+        check("worktree bootstrap, symlinked root: unrelated write allowed",
+              write_payload(w2, w2 / "notes.md"), o2, want_deny=False)
+
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)
         check("TMPDIR inside project: data write still denied",

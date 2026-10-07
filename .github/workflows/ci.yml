@@ -29,9 +29,11 @@ jobs:
           # SKILL.md check reads only the frontmatter block, and
           # plugin.json is parsed as JSON
           v="$(cat VERSION)"
-          awk '/^---$/{n++; next} n==1' SKILL.md \
-            | grep -qE "^[[:space:]]*version: \"$v\"[[:space:]]*$" \
-            || { echo "SKILL.md frontmatter version != VERSION ($v)"; exit 1; }
+          # extract the frontmatter field and compare LITERALLY: a regex
+          # interpolation would let the dots in 0.5.0 match any character
+          sk="$(awk '/^---$/{n++; next} n==1' SKILL.md \
+            | sed -n 's/^[[:space:]]*version: "\(.*\)"[[:space:]]*$/\1/p' | head -1)"
+          [ "$sk" = "$v" ] || { echo "SKILL.md frontmatter version ($sk) != VERSION ($v)"; exit 1; }
           python3 -c "import json,sys; sys.exit(0 if json.load(open('.claude-plugin/plugin.json'))['version'] == open('VERSION').read().strip() else 1)" \
             || { echo "plugin.json version != VERSION ($v)"; exit 1; }
 

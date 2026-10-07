@@ -137,6 +137,9 @@ MUTATIONS = [
     ("digest keyed to a relative unrelated path", [], "mock_good.json",
      lambda d: d.update(data_versions={"unrelated/data/workers.csv":
                                        d["data_versions"]["data/workers.csv"]}), 1),
+    ("flagged-share reported without the value", [], "mock_good.json",
+     lambda d: [r.update(reported="flagged") for r in d["values"]
+                if "13" in str(r.get("reported", ""))], 1),
 ]
 
 
