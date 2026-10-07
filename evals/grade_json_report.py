@@ -292,6 +292,23 @@ def grade_targets(report, expected):
         if not recs:
             g.check(False, f"{t['id']}: a record covers it", f"no record mentions {t['anchors']}")
             continue
+        # a reported field must not reverse a keyed predicate: a record
+        # pairing on the bare threshold while stating "p > 0.001"
+        # asserts the opposite of the manuscript claim, with the
+        # unchanged computed value blessing the contradiction. The
+        # contradiction comes from the key's own predicate fields — no
+        # verbatim reported key is needed
+        if t.get("kind") == "predicate" and t.get("predicate") in ("less_than",
+                                                                   "greater_than"):
+            wrong_op = ">" if t["predicate"] == "less_than" else "<"
+            pv = str(t.get("predicate_value", ""))
+            bad_ops = (wrong_op + pv, wrong_op + "=" + pv)
+            rev = [r.get("reported") for r in recs
+                   if any(b in str(r.get("reported", "")).lower().replace(" ", "")
+                          for b in bad_ops)]
+            g.check(not rev,
+                    f"{t['id']}: reported does not reverse the manuscript predicate",
+                    f"reported: {rev}" if rev else "")
         cls = {r.get("classification") for r in recs}
         g.check(cls == {t["expected"]}, f"{t['id']}: classified {t['expected']}",
                 f"report says {sorted(map(str, cls))}")
@@ -372,6 +389,7 @@ def grade_gate(report, expected):
     paired = set()
     cover = []
     hits = {}
+    rec_targets = {}
     for t in expected["targets"]:
         recs = pair_records(values, t["anchors"])
         paired.update(id(r) for r in recs)
@@ -379,6 +397,7 @@ def grade_gate(report, expected):
         for r in recs:
             hits.setdefault(id(r), [str(r.get("reported"))[:40], 0])
             hits[id(r)][1] += 1
+            rec_targets.setdefault(id(r), set()).add(t["id"])
         g.check(bool(recs), f"gate: {t['id']} covered by a record")
     # one record per manuscript value cuts both ways: a record pairing to
     # several targets is a record of no single value, so ten copies of a
@@ -430,6 +449,27 @@ def grade_gate(report, expected):
                                    for n in removed))]
     g.check(not bad_reasons, "every reason explains an absence or the failed gate",
             f"reasons: {bad_reasons[:2]}" if bad_reasons else "")
+    # a reason must explain THIS record's blockage: a record covering
+    # the sample size while citing only the optional wave-2 file as its
+    # missing source manufactures failure provenance the gate did not
+    # route through that file. A target-specific source is permitted
+    # only on records covering its own target; the removed input and
+    # the failed gate remain valid for every record
+    specific = {t["id"]: str(t.get("reason_must_contain", "")).lower()
+                for t in expected["targets"] if t.get("reason_must_contain")}
+    misattributed = []
+    for r in values:
+        reason = str(r.get("reason", "")).lower()
+        if any(n.split("/")[-1] in reason for n in removed):
+            continue
+        if any(w in reason for w in ("failed gate", "gate failed", "gate failure")):
+            continue
+        cited = {tid for tid, src in specific.items() if src and src in reason}
+        if cited and not (rec_targets.get(id(r), set()) & cited):
+            misattributed.append(str(r.get("reason"))[:60])
+    g.check(not misattributed,
+            "gate: no reason cites only another target's missing source",
+            f"reasons: {misattributed[:2]}" if misattributed else "")
     # provenance for the removed input must record its absence — the
     # schema requires it where there is nothing to hash. Asserting a
     # digest is a planted claim, and so is any entry that does not state

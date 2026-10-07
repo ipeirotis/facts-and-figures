@@ -12,10 +12,11 @@
 #
 # When the author named a different proposal directory, the marker file's
 # single line carries that directory's path (relative to the project), and
-# the hook guards it; the FACTS_AND_FIGURES_OUT environment variable is
-# honored as a fallback for launches configured that way. A proposal
-# directory that equals or contains the project is rejected — it would
-# whitelist the author's tree — as is one reached through a symlink.
+# the hook guards it. The marker is the ONLY channel for a custom
+# directory: an environment-variable fallback would bypass the
+# fresh-directory validation the bootstrap applies to marker content. A
+# proposal directory that equals or contains the project is rejected — it
+# would whitelist the author's tree — as is one reached through a symlink.
 #
 # The payload is parsed straight from stdin: a Write payload carries the
 # whole file content, and routing it through an environment variable or an
@@ -207,7 +208,12 @@ except Exception:
 # non-blocking and would let the intercepted write through
 if "\x00" in named or len(named) > 4096:
     named = ""
-out_dir = named or os.environ.get("FACTS_AND_FIGURES_OUT", "") or "facts-and-figures-out"
+# the marker content is the single channel for a custom directory — an
+# environment fallback was dropped because it reached this assignment
+# without the fresh-directory validation the bootstrap applies to
+# marker content, so FACTS_AND_FIGURES_OUT=data would have handed the
+# dataset to the allowance on an empty marker
+out_dir = named or "facts-and-figures-out"
 proposal_lexical = os.path.normpath(os.path.join(project, out_dir))
 proposal = os.path.realpath(proposal_lexical)
 

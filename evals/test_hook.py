@@ -134,11 +134,21 @@ def main():
         marker_path.unlink()
         marker_path.touch()
 
-        # a proposal override that contains the project must not whitelist it
+        # the environment variable is no longer a channel for the
+        # proposal directory — it bypassed the fresh-directory
+        # validation the bootstrap applies to marker content
         marker = proj / "facts-and-figures-out" / ".active"
-        check("FACTS_AND_FIGURES_OUT=..: manuscript write still denied",
+        check("env naming ..: ignored, manuscript write still denied",
               write_payload(proj, proj / "manuscript.md"), proj, want_deny=True,
               extra_env={"FACTS_AND_FIGURES_OUT": ".."})
+        (proj / "data").mkdir(exist_ok=True)
+        (proj / "data" / "workers.csv").write_text("id\n1\n")
+        check("env naming the data directory: ignored, data write denied",
+              write_payload(proj, proj / "data" / "x.csv"), proj, want_deny=True,
+              extra_env={"FACTS_AND_FIGURES_OUT": "data"})
+        check("env naming the data directory: default proposal still allowed",
+              write_payload(proj, proj / "facts-and-figures-out" / "s.py"), proj,
+              want_deny=False, extra_env={"FACTS_AND_FIGURES_OUT": "data"})
         marker.write_text("..\n")
         check("marker naming ..: manuscript write still denied",
               write_payload(proj, proj / "manuscript.md"), proj, want_deny=True)

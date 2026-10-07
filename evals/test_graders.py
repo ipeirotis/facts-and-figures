@@ -191,6 +191,24 @@ MUTATIONS = [
                                 "verified; it is not missing")
                 for r in d["values"]
                 if r.get("classification") == "unverifiable"], 1),
+    # a reported field reversing the manuscript predicate pairs on the
+    # bare threshold while asserting the opposite claim
+    ("reported predicate reversed", [], "mock_good.json",
+     lambda d: [r.update(reported="p > 0.001") for r in d["values"]
+                if r.get("reported") == "p < 0.001"], 1),
+    # a gate reason citing only the optional wave-2 source manufactures
+    # failure provenance for the nine targets the gate did not block
+    # through it
+    ("gate reasons citing only the wave-2 source", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="data/wave2_followup.csv is not distributed; "
+                                "nothing was computed")
+                for r in d["values"]], 1),
+    # ...while a generic absence reason naming no specific source stays
+    # sufficient
+    ("gate reasons naming no specific source", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="the required input is missing and the "
+                                "pipeline did not run")
+                for r in d["values"]], 0),
 ]
 
 
