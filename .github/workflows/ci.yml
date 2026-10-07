@@ -15,6 +15,8 @@ jobs:
         run: python3 evals/check_fixture.py
       - name: run the grader self-tests (no LLM)
         run: python3 evals/test_graders.py
+      - name: run the write-boundary hook self-tests (no LLM)
+        run: python3 evals/test_hook.py
       - name: check for dangling reference citations
         run: |
           grep -rhoE 'references/[a-z0-9-]+\.md' -- SKILL.md README.md AGENTS.md references/ \

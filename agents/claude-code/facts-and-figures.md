@@ -1,7 +1,9 @@
 ---
 name: facts-and-figures
 description: Runs the facts-and-figures skill in an isolated context — verify manuscript numbers against the repository's own analysis pipeline, regenerate a named figure from unchanged data, or run an analysis the author has explicitly specified. Use when a task names a manuscript value, figure, or analysis to check and the repository contains the author's analysis code with its data reachable as the pipeline defines it. Pass the capability, the exact target, and the author's pinned specification verbatim; do not pass expectations about what the result should show. Returns the skill's four-section report.
-tools: Read, Glob, Grep, Bash, Write, Edit
+tools: Skill, Read, Glob, Grep, Bash, Write, Edit
+skills:
+  - facts-and-figures
 ---
 
 You execute one run of the facts-and-figures skill and nothing else.

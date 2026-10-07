@@ -3,9 +3,16 @@
 #
 # While a facts-and-figures run is active (the run marker
 # <proposal-dir>/.active exists), deny Write/Edit/MultiEdit/NotebookEdit
-# calls that target anything outside the proposal directory or the system
-# temp directory. Without the marker the hook is inert, so it never
-# interferes with ordinary editing sessions in the same repository.
+# calls that target anything outside the proposal directory or a scratch
+# root. Without the marker the hook is inert, so it never interferes with
+# ordinary editing sessions in the same repository.
+#
+# The payload is parsed straight from stdin: a Write payload carries the
+# whole file content, and routing it through an environment variable or an
+# argument would fail with E2BIG on large writes, making the hook fail
+# open exactly when it matters. A scratch root (/tmp, $TMPDIR) is allowed
+# only when it does not contain the project: a checkout that itself lives
+# under /tmp would otherwise be entirely whitelisted.
 #
 # This is a guardrail, not a sandbox: writes made through shell commands
 # (Bash redirects, `sed -i`, the pipeline itself) are not intercepted. The
@@ -22,16 +29,13 @@
 
 set -u
 
-FNF_HOOK_INPUT="$(cat)"
-export FNF_HOOK_INPUT
-
 command -v python3 >/dev/null 2>&1 || exit 0
 
-exec python3 - <<'PY'
+exec python3 -c '
 import json, os, sys
 
 try:
-    payload = json.loads(os.environ.get("FNF_HOOK_INPUT") or "{}")
+    payload = json.load(sys.stdin)
 except Exception:
     sys.exit(0)
 
@@ -40,6 +44,7 @@ if tool not in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
     sys.exit(0)
 
 project = os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd") or os.getcwd()
+project = os.path.realpath(project)
 out_dir = os.environ.get("FACTS_AND_FIGURES_OUT", "facts-and-figures-out")
 proposal = os.path.realpath(os.path.join(project, out_dir))
 marker = os.path.join(proposal, ".active")
@@ -55,10 +60,14 @@ if not target:
 cwd = payload.get("cwd") or project
 resolved = os.path.realpath(os.path.join(cwd, os.path.expanduser(target)))
 
-allowed = [proposal, os.path.realpath("/tmp")]
-tmpdir = os.environ.get("TMPDIR")
-if tmpdir:
-    allowed.append(os.path.realpath(tmpdir))
+allowed = [proposal]
+for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
+    if not scratch:
+        continue
+    root = os.path.realpath(scratch)
+    if project == root or project.startswith(root + os.sep):
+        continue
+    allowed.append(root)
 
 for root in allowed:
     if resolved == root or resolved.startswith(root + os.sep):
@@ -66,9 +75,9 @@ for root in allowed:
 
 reason = (
     "facts-and-figures write boundary: a run is active (marker {m}) and {t} is outside "
-    "the proposal directory {p}. The skill never edits the author's manuscript, data, "
-    "figures, or analysis code; write generated work under the proposal directory instead. "
-    "If no run is actually in progress, remove the marker file to disarm this guard."
+    "the proposal directory {p}. The skill never edits the manuscript, data, figures, or "
+    "analysis code; write generated work under the proposal directory instead. If no run "
+    "is actually in progress, remove the marker file to disarm this guard."
 ).format(m=marker, t=resolved, p=proposal)
 
 print(json.dumps({
@@ -79,4 +88,4 @@ print(json.dumps({
     }
 }))
 sys.exit(0)
-PY
+'

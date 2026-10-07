@@ -16,6 +16,17 @@ Completes the roadmap's items 4 and 5: the repository is now a Claude Code plugi
 - CI workflows. `ci.yml`: fixture self-check, grader self-tests, dangling-reference check, three-way version consistency (`VERSION`, `SKILL.md`, `plugin.json`), and strict plugin validation on every push and pull request. `agent-eval.yml`: the full headless eval against the fixture on pushes to `main` touching runtime files, gated on the `ANTHROPIC_API_KEY` secret with a clean skip when absent, reports uploaded as artifacts.
 - A template workflow in `README.md` for verifying a real paper repository on every push, with the policy note that failing on `unverifiable` is the author's choice, not a default.
 
+### Fixed
+
+Review findings on the pull request, each verified before fixing:
+
+- The write-boundary hook parses its payload straight from stdin instead of exporting it: a `Write` payload carries the whole file content, and the environment-variable route failed with `E2BIG` at roughly 128 KiB — failing open, since a hook error with empty output does not block. It also no longer allows a scratch root that contains the project: a checkout living under `/tmp` (as the eval workspaces do) was previously whitelisted entirely while the marker was armed. `evals/test_hook.py` covers both regressions plus the ordinary allow and deny paths, and runs in CI.
+- The subagent wrapper's tool list includes `Skill` and preloads the `facts-and-figures` skill, so a plugin-installed subagent can actually reach the protocol; the on-disk fallback paths remain for plain installs.
+- `SKILL.md` places the run marker inside the proposal directory the author named rather than hard-coding the default, keeping the marker and the hook pointed at the same directory.
+- `README.md` qualifies parallel fan-out: concurrent runs need per-run proposal directories (`FACTS_AND_FIGURES_OUT`) or separate checkouts, since the default directory would share one marker and one `verification-report.json`.
+- The answer key gains the two pipeline-backed counts the manuscript also reports — the 40-worker sample size and the 10,000 permutations — so omitting them can no longer pass unnoticed, and both prose graders now require all four sections of the return contract to be present.
+- The gate-case contract is stated precisely in the eval docs: no value may be classified as match or mismatch after a failed gate; a blanket unverifiable naming the missing input is the correct outcome (what the live run produced, and what the grader accepts).
+
 ### Changed
 
 - The subagent wrapper prefers invoking the `facts-and-figures` skill directly when a plugin install exposes it, falling back to locating `SKILL.md` on disk.

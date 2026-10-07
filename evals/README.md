@@ -20,7 +20,7 @@ every classification the protocol defines:
 | flagged share | 13% | exactly 12.5% | match **and** a named boundary case — the exact lower-endpoint tie, where half-up prints 13 and half-even prints 12 |
 | wave-2 retention | 64% | source file not distributed | unverifiable |
 | permutation test | p < 0.001 | 9.999e-05 | match, checked as a predicate |
-| gate case | — | dataset removed | name the unreachable input and stop; classify nothing |
+| gate case | — | dataset removed | name the unreachable input; classify nothing as match or mismatch — a blanket unverifiable naming the missing input is the correct outcome |
 
 The dataset was constructed in integer cents so the documented values are
 exact, not approximate: group sums 1492.85 and 1366.45 give the means

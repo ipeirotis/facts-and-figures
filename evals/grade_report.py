@@ -34,6 +34,21 @@ CLS_RE = {
     "unverifiable": re.compile(r"\bunverifiable\b|\b(cannot|could not|can['’]t) be verified\b|\bnot verifiable\b", re.I),
 }
 BOUNDARY_RE = re.compile(r"\bboundary\b|\btie\b|half[- ]even|\bendpoint\b", re.I)
+SECTIONS = ("scope and gate", "method and provenance", "results", "author decisions")
+
+
+def grade_sections(report):
+    """The skill's return contract names four sections; a report missing one
+    dropped part of the contract (typically provenance or the gate)."""
+    ok = True
+    low = report.lower()
+    for s in SECTIONS:
+        if s in low:
+            print(f"PASS  section present: {s}")
+        else:
+            print(f"FAIL  section missing: {s}")
+            ok = False
+    return ok
 
 
 def classify_text(text):
@@ -66,7 +81,7 @@ def assertions_for(lines, anchors):
 
 def grade_targets(report, expected):
     lines = report.splitlines()
-    ok = True
+    ok = grade_sections(report)
     for t in expected["targets"]:
         found, asserted = assertions_for(lines, t["anchors"])
         if not found:
@@ -94,7 +109,7 @@ def grade_targets(report, expected):
 
 def grade_gate(report, expected):
     gc = expected["gate_case"]
-    ok = True
+    ok = grade_sections(report)
     for name in gc["report_must_name"]:
         if name.lower() in report.lower():
             print(f"PASS  gate: report names {name}")

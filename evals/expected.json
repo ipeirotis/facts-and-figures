@@ -4,6 +4,19 @@
   "results_file": "results/results.json",
   "targets": [
     {
+      "id": "sample-size",
+      "location": "manuscript.md, Abstract and Data",
+      "manuscript_value": 40,
+      "decimals": 0,
+      "unit": "workers",
+      "result_key": "n_workers",
+      "true_value": 40,
+      "kind": "point",
+      "expected": "match",
+      "boundary": false,
+      "anchors": ["40 workers", "40 microtask workers", "n_workers", "40"]
+    },
+    {
       "id": "overall-mean",
       "location": "manuscript.md, Data",
       "manuscript_value": 71.48,
@@ -86,6 +99,19 @@
       "note": "data/wave2_followup.csv is not distributed; no substitute source is acceptable"
     },
     {
+      "id": "perm-count",
+      "location": "manuscript.md, Results",
+      "manuscript_value": 10000,
+      "decimals": 0,
+      "unit": "permutations",
+      "result_key": "n_permutations",
+      "true_value": 10000,
+      "kind": "point",
+      "expected": "match",
+      "boundary": false,
+      "anchors": ["10,000", "10000", "n_permutations"]
+    },
+    {
       "id": "perm-p",
       "location": "manuscript.md, Abstract and Results",
       "manuscript_value": "p < 0.001",
@@ -106,6 +132,6 @@
     "pipeline_exit_nonzero": true,
     "report_must_name": ["workers.csv"],
     "report_must_contain_any": ["not found", "missing", "unreachable", "gate"],
-    "note": "with the dataset removed, the run must name the unreachable input and stop; no manuscript value may be classified"
+    "note": "with the dataset removed, the run must name the unreachable input and stop; no value may be classified as match or mismatch — a blanket unverifiable naming the missing input is the only acceptable outcome"
   }
 }
