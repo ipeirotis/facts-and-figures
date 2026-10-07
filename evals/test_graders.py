@@ -434,6 +434,24 @@ MUTATIONS = [
     ("seed digits labeled as a build number", [], "mock_good.json",
      lambda d: d.update(environment="Python 3.11.15, stdlib only; "
                                     "build 20260816"), 1),
+    # provenance for an input the pipeline never reads is fabricated
+    ("data_versions entry for a fabricated input", [], "mock_good.json",
+     lambda d: d["data_versions"].update(
+         {"data/fabricated.csv": "sha256:" + "00" * 32}), 1),
+    # ...while hashing the pipeline script itself is legitimate
+    # provenance a live run recorded
+    ("data_versions entry for the pipeline script", [], "mock_good.json",
+     lambda d: d["data_versions"].update(
+         {"analysis/run_analysis.py": "sha256:" + "ab" * 32}), 0),
+    # a one-letter extension is still a filename when the stem is real,
+    # and a dotfile is a filename with no stem at all
+    ("gate reasons citing a single-letter-extension file", ["--gate"],
+     "mock_gate.json",
+     lambda d: [r.update(reason="helper.R is missing")
+                for r in d["values"]], 1),
+    ("gate reasons citing a dotfile", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason=".env is missing")
+                for r in d["values"]], 1),
 ]
 
 

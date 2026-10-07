@@ -148,6 +148,17 @@ mkdir -p "$WORK"
 # absolute from here on: the printed manual-fallback commands cd into a
 # workspace and then reference $WORK again, which a relative path breaks
 WORK="$(cd "$WORK" && pwd)"
+# the answer-key lockout chmods this checkout closed while the agent
+# runs, so a workspace inside it would be sealed too and the harness
+# would break itself before the measured run
+SKILL_REAL="$(python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$SKILL_DIR")"
+WORK_REAL="$(python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$WORK")"
+case "$WORK_REAL" in
+    "$SKILL_REAL"|"$SKILL_REAL"/*)
+        echo "refusing to use $WORK: it is inside the skill checkout, which the" >&2
+        echo "answer-key lockout seals during the run; choose a directory outside" >&2
+        exit 1 ;;
+esac
 touch "$WORK/.fnf-eval-workspace"
 prepare verify
 prepare gated

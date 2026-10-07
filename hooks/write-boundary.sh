@@ -187,6 +187,14 @@ def bootstrap_checks(cands):
         # wrong directory and every real write would be denied
         named_dir = os.path.realpath(
             os.path.normpath(os.path.join(c, os.path.expanduser(line))))
+        if os.path.exists(named_dir) and not os.path.isdir(named_dir):
+            deny(
+                "facts-and-figures write boundary: this marker names {d} as the "
+                "proposal directory, but that path is an existing file, not a "
+                "directory. Arming it would leave the run stuck behind a guard "
+                "that can allow nothing: name a new or empty directory "
+                "instead.".format(d=named_dir)
+            )
         try:
             occupied = os.path.isdir(named_dir) and bool(os.listdir(named_dir))
         except OSError:

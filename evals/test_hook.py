@@ -524,6 +524,12 @@ def main():
         check("custom dir filled after its marker: further writes allowed",
               write_payload(p12, p12 / "custom12" / "s.py"), p12, want_deny=False)
 
+        # a marker naming an existing FILE would arm a guard that can
+        # allow nothing — the bootstrap refuses it outright
+        check("bootstrap marker naming an existing file: denied",
+              write_payload(p8, p8 / "facts-and-figures-out" / ".active",
+                            content="data/workers.csv\n"), p8, want_deny=True)
+
         # a home-relative custom directory (~/...) expands as it does for
         # write targets: the guard must protect the directory the author
         # actually named, not a literal ~ under the project

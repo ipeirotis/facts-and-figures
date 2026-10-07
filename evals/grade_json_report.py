@@ -150,6 +150,24 @@ def pair_records(values, anchors):
             if any(rx.search(str(r.get("reported", "")).lower()) for rx in rxs)]
 
 
+def check_known_inputs(g, report, expected):
+    """Every data_versions key must name something the fixture actually
+    contains — or the keyed unavailable source, whose entry the
+    per-target checks hold to recording an absence. An entry hashing
+    data/fabricated.csv certifies provenance for an input the pipeline
+    never reads."""
+    fdir = EVALS / expected["fixture"]
+    fix_files = {str(p.relative_to(fdir)).replace("\\", "/").lower()
+                 for p in fdir.rglob("*") if p.is_file()}
+    musts = [str(t.get("reason_must_contain", "")).lower()
+             for t in expected["targets"] if t.get("reason_must_contain")]
+    unknown = [str(k)[:50] for k in (report.get("data_versions") or {})
+               if not any(names_input(k, rel) for rel in fix_files)
+               and not any(names_file(m, norm_path(str(k)).lower()) for m in musts)]
+    g.check(not unknown, "every data_versions entry names a known input",
+            f"unknown entries: {unknown[:3]}" if unknown else "")
+
+
 def known_sections(expected):
     """Every manuscript section the answer key names in any target's
     `sections` list — the vocabulary the location check recognizes."""
@@ -419,6 +437,7 @@ def grade_targets(report, expected):
         and not neg_digest.search(e.lower()) for e in entries)
     g.check(ok, "data_versions carries the real workers.csv digest",
             "" if ok else f"entries: {[e[:50] for e in entries]!r}")
+    check_known_inputs(g, report, expected)
 
     # the documented RNG seed must appear in a provenance field — the
     # protocol logs it so the permutation result can be reproduced, and a
@@ -666,12 +685,15 @@ def grade_gate(report, expected):
     # from existing key fields. Anything else (README.md, a lookalike
     # dataset) is fabricated blockage
     # any filename-shaped token, not a hard-coded extension list — a
-    # reason blaming appendix.tex or appendix.markdown fabricates
-    # blockage as surely as one blaming README.md. Two extension
-    # characters minimum, starting with a letter, so prose idioms
-    # (e.g., i.e.) and version numbers do not read as files; the upper
-    # bound only stops runaway tokens, never a real extension
-    FILE_RX = re.compile(r"[\w./-]*\w\.[a-z][a-z0-9]{1,11}\b")
+    # reason blaming appendix.tex, appendix.markdown, helper.R or .env
+    # fabricates blockage as surely as one blaming README.md. Prose
+    # idioms stay excluded: a single-letter extension needs a stem of at
+    # least two characters (so e.g and i.e do not read as files) and
+    # must be a letter (so no.1 does not); the upper bound only stops
+    # runaway tokens, never a real extension
+    FILE_RX = re.compile(r"[\w./-]*\w\.[a-z][a-z0-9]{1,11}\b"
+                         r"|[\w./-]*\w\w\.[a-z]\b"
+                         r"|(?<![\w.-])\.[a-z][a-z0-9]{1,11}\b")
     ok_context = (str(expected.get("pipeline_command", "")) + " "
                   + str(expected.get("results_file", "")) + " "
                   + " ".join(expected.get("manuscript_files", []))).lower()
@@ -727,6 +749,7 @@ def grade_gate(report, expected):
                       NEG_ABSENCE_RE.sub(" ", e.lower())) for e in entries)
         g.check(absent_ok, f"gate: data_versions records {name} as absent",
                 f"entries: {entries}" if not absent_ok else "")
+    check_known_inputs(g, report, expected)
     text = json.dumps(report).lower()
     for name in expected["gate_case"]["report_must_name"]:
         # bounded: a companion naming only notworkers.csv has not named
