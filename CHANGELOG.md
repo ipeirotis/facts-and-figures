@@ -3,6 +3,34 @@
 All notable changes to facts-and-figures (called paper-analyst before v0.2.0) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versions use [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+Codex review findings on the skill as vendored into a manuscript repository (IliasTriant/inattentiveness_paper#14), each checked against the current text before fixing:
+
+- A verification pipeline that writes to the working tree no longer runs there after the author approves. `references/analysis-integrity.md` step 4 said to stop and ask, which implied approval licensed an in-place run, while the integrity norms say verification writes nothing of the author's. The run now goes, in order, to a read-only or dry-run path, an output location redirected into the proposal directory, or a disposable copy there (`git archive` or `git clone`, never `git worktree add`, which writes into the author's `.git`) removed at teardown; with none possible, its values are unverifiable. The integrity norm names these as the only additions verification may author.
+- The rounding tolerance follows the last displayed digit, exponent included. `u = 10^-k` read `1.2 × 10^-4` as one decimal and accepted values orders of magnitude off; scientific notation now uses `u = 10^(e-k)`.
+- A BigQuery time-travel decorator no longer counts as a pinned data version by itself (`references/compute-environment.md`). It resolves only within the two-to-seven-day time-travel window, so the point it fixes must be preserved durably, as a table snapshot (with the author's go-ahead) or an archived export with its hash, or the result is unverifiable. A partition key with a fixed as-of date is no longer listed as a pin either, since an ordinary partition can be rewritten; it is preserved the same way unless the source guarantees immutability.
+- The rounding test runs in the manuscript's display unit. A reported `7%` against a computed `0.071` was a false mismatch (`m = 7`, `v = 0.071`); `v` is now converted into the displayed unit (percent, basis points, millions) before the interval applies, the conversion is logged, and an unstated unit is a question for the author.
+- The run marker is created exclusively (`SKILL.md`). Two runs in one checkout could both rewrite it and share `verification-report.json`, and the first teardown removed the other's guard; an existing marker now stops the run with a reported conflict, and a run never removes a marker it did not create.
+- `data_versions` accepts remote inputs (`references/verification-report.md`). Keys were restricted to repository-relative paths, so a warehouse or bucket read could not record what it actually read; a remote input is now keyed by its canonical identifier with the pin (`bq://…`, `gs://…#generation`), never by the config file naming it.
+- The README's CI gate rejects non-finite values. `json.load` accepts `NaN` and `Infinity`, which passed the numeric check, so a pipeline failure yielding `NaN` could be recorded as a match and pass the gate; the check now requires floats to be finite (`math.isfinite`), while ints pass as they are, since converting a very large one would overflow.
+- The write-boundary hook refuses a run marker under a non-root working directory (`hooks/write-boundary.sh`). With no marker armed, a session whose cwd sat in a subdirectory could create `facts-and-figures-out/.active` there; once the cwd returned to the repository root the ancestor scan no longer found it and the guard went inert for the rest of the run. Raised in Codex review of the hook vendored into IliasTriant/inattentiveness_paper#14; The same check applies to the parallel-mode bootstrap of a second checkout. A candidate with no enclosing root (a non-git checkout reached only through the cwd) keeps its candidacy. `evals/test_hook.py` covers the subdirectory denial and the root bootstrap from a subdirectory cwd, for a single checkout and for a second one.
+
+- An endpoint tie is classified by the stated convention: the included lower endpoint is a match and the excluded upper endpoint a mismatch, both still named as boundary cases. The tie paragraph had said to report any endpoint hit as a match, which certified an upper-endpoint value the manuscript does not display.
+- A redirected output location counts as non-mutating only when every write the pipeline makes goes there (caches, logs, side tables), not just its main output; otherwise the disposable copy runs.
+- The subagent wrapper and README state that `omitClaudeMd` needs Claude Code v2.1.271 or later; on older versions the field is ignored, and the wrapper's rule to treat those files as read-only input applies to what loaded.
+- The README's CI gate checks field types, not truthiness: `location`, `reported`, `tolerance`, `producing_command`, and `reason` must be non-empty strings, and `classification` one of the three classes.
+
+- Scientific notation at the bottom of a decade gets an asymmetric interval: a mantissa of exactly 1 takes its lower endpoint from the decade below (`|m| - u/20`), so `1.0 × 10^3` accepts `[995, 1050)` and no longer certifies `960`, which displays as `9.6 × 10^2`.
+- The disposable copy is used only after confirming that every write resolves inside the copy or the proposal directory; an absolute output path, an environment-configured cache path, or a copied symlink can lead a copy's writes back into the author's checkout.
+
+- The run marker's exclusive create names `os.open(..., O_CREAT | O_EXCL)`, which fails on any existing node; Bash's `noclobber` refuses only regular files and blocks on a FIFO at the marker path.
+- An archived export of time-travel rows pins the data only when a logged command reruns the pipeline (or the producing step) against it; a pipeline hard-wired to the time-travel query needs the table snapshot.
+
+- `SKILL.md` places the run marker at the root of the repository being verified (the manuscript checkout or the linked worktree the run works in), never inside a nested repository such as a submodule, since the hook ascends from the working directory and a deeper marker goes unseen once the session returns to the root. Codex proposed enforcing this in the hook by requiring markers discoverable from `CLAUDE_PROJECT_DIR`; that would break runs in linked worktrees nested inside the checkout (Claude Code places worktrees under `.claude/worktrees/`), and a worktree and a submodule both carry `.git` as a file, so the author chose the protocol rule.
+
 ## [0.5.0] - 2026-10-07
 
 Completes the roadmap's items 4 and 5: the repository is now a Claude Code plugin, and verification is scriptable end to end. Minor bump: the output contract gains the machine-readable companion.

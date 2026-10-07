@@ -203,6 +203,24 @@ def main():
               write_payload(rproj, rproj / "facts-and-figures-out" / ".active"), rproj,
               want_deny=False)
 
+        # a session whose cwd sits in a subdirectory must not bootstrap the
+        # marker there: once the cwd returns to the root, the ancestor scan
+        # no longer finds it and the guard goes inert mid-run
+        bproj = Path(home_base) / "paper5b"
+        (bproj / ".git").mkdir(parents=True)
+        (bproj / "analysis" / "facts-and-figures-out").mkdir(parents=True)
+        sub_payload = write_payload(bproj / "analysis",
+                                    bproj / "analysis" / "facts-and-figures-out" / ".active")
+        check("no marker, cwd in subdirectory: marker under the subdirectory denied",
+              sub_payload, bproj, want_deny=True)
+        root_payload = write_payload(bproj / "analysis",
+                                     bproj / "facts-and-figures-out" / ".active")
+        check("no marker, cwd in subdirectory: marker at the root allowed",
+              root_payload, bproj, want_deny=False)
+        check("no marker, cwd in subdirectory: unrelated write allowed",
+              write_payload(bproj / "analysis", bproj / "analysis" / "notes.md"),
+              bproj, want_deny=False)
+
         # a broken marker symlink must still arm the guard: with exists()
         # it would read as absent and the write recreating the marker could
         # follow the link to create an author file
@@ -469,6 +487,20 @@ def main():
                             content="data\n"), o5, want_deny=True)
         check("second checkout manuscript before bootstrap: denied",
               write_payload(w5, w5 / "manuscript.md"), o5, want_deny=True)
+
+        # the same parallel mode bootstrapped from a subdirectory of a git
+        # second checkout: the marker belongs at that checkout's root, or
+        # it drops out of the ancestor scan once the cwd returns there
+        w6 = Path(home_base) / "wt6"
+        (w6 / ".git").mkdir(parents=True)
+        (w6 / "analysis" / "facts-and-figures-out").mkdir(parents=True)
+        check("second checkout, cwd in subdirectory: subdirectory marker denied",
+              write_payload(w6 / "analysis",
+                            w6 / "analysis" / "facts-and-figures-out" / ".active",
+                            content=""), o5, want_deny=True)
+        check("second checkout, cwd in subdirectory: root marker allowed",
+              write_payload(w6 / "analysis", w6 / "facts-and-figures-out" / ".active",
+                            content=""), o5, want_deny=False)
 
         # a session that has entered the proposal directory must still
         # be able to author files there: the raw cwd is a candidate for

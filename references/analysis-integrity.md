@@ -137,10 +137,29 @@ when the analysis code or data carry uncommitted changes, or the data is
 not versioned at all, say so and identify the actual inputs read (for
 example by file path and content hash), since a bare commit hash no longer
 reproduces the run. Prefer read-only execution. If the pipeline wants
-credentials or network access, would take very long, or would write to the
-working tree (overwrite outputs, rebuild generated tables or caches in
-place), stop and ask before running, or use a read-only or dry-run path
-when the pipeline offers one.
+credentials or network access, or would take very long, stop and ask before
+running.
+
+A pipeline that would write to the working tree (overwrite outputs, rebuild
+generated tables or caches in place) never runs there, approval or not:
+verification writes nothing of the author's (see the integrity norms
+below), and an author's go-ahead does not change that. Use, in order, a
+read-only or dry-run path the pipeline offers; an output location the
+pipeline lets you redirect into the proposal directory, only when every
+write it makes goes there (caches, logs, and side tables included, not
+just the main output); or a disposable
+copy inside the proposal directory, made without touching the author's
+repository (`git archive` of the logged commit unpacked there, or a `git
+clone` into it; never `git worktree add`, which writes metadata into the
+author's `.git`), carrying over any uncommitted inputs the run reads,
+recorded by path and content hash, and removed at teardown. A copy
+isolates only relative writes: before running it, confirm that every
+write the pipeline makes resolves inside the copy or the proposal
+directory, with no absolute output path, environment-configured cache
+path, or copied symlink leading back into the author's checkout. Log which
+one ran. When none
+is possible, the values that run would produce are unverifiable: say why
+in `Author decisions` and do not run it.
 
 ### 5. Diff and report
 
@@ -166,12 +185,19 @@ Compare, value by value, and classify each as one of:
   rounding rule.
 
   Fix the tie convention with the tolerance, so "correctly rounded" cannot
-  mean two things. For a manuscript value `m` reported to `k` decimals, with
-  `u = 10^-k`, the accepted set is the half-open interval on magnitudes
+  mean two things. For a manuscript value `m`, let `u` be the place value of
+  its last displayed digit: `u = 10^-k` for a value reported to `k`
+  decimals, and `u = 10^(e-k)` for one in scientific notation with `k`
+  mantissa decimals and exponent `e`, so `1.2 × 10^-4` gives `u = 10^-5`,
+  never `10^-1`. The accepted set is the half-open interval on magnitudes
 
       |m| - u/2  <=  |v|  <  |m| + u/2,   with v of the same sign as m
 
-  (for `m = 0`, simply `|v| < u/2`), which is exactly the set of values that
+  (for `m = 0`, simply `|v| < u/2`; for scientific notation whose mantissa
+  is exactly 1 at the bottom of its decade, the lower endpoint is
+  `|m| - u/20`, half a unit of the decade below, since `1.0 × 10^3` is
+  displayed by `[995, 1050)` and `960` displays as `9.6 × 10^2`), which is
+  exactly the set of values that
   display as `m` under round-half-up, where a half rounds away from zero
   (Python's `decimal.ROUND_HALF_UP`). Working on magnitudes keeps negative
   values right: against a reported `-1.25`, `-1.255` displays as `-1.26` and
@@ -182,11 +208,20 @@ Compare, value by value, and classify each as one of:
   report. The lower magnitude endpoint is included, since `1.245` displays as
   `1.25` under half-up.
 
+  Compare in the manuscript's display unit. When the manuscript shows a
+  scaled unit and the pipeline emits the underlying value, convert `v` into
+  the displayed unit before applying the interval (×100 for a percentage,
+  ×10,000 for basis points, ÷10^6 for a value labeled in millions), never
+  `m` or `u`, and log the conversion: a reported `7%` against a computed
+  `0.071` compares `7.1` with `[6.5, 7.5)`. A unit the manuscript does not
+  state is a question for the author, not a guess.
+
   A value landing exactly on either endpoint is a tie, and a tie is the one
   case where the two conventions disagree: `1.245` displays as `1.24` under
   half-even, which most numerical libraries use by default. Do not resolve
-  that silently. Report an endpoint hit as a match under the stated
-  convention *and* name it as a boundary case in `Author decisions`, giving
+  that silently. Classify an endpoint hit under the stated convention (the
+  included lower endpoint is a match, the excluded upper endpoint a
+  mismatch) *and* name it as a boundary case in `Author decisions`, giving
   both values, so the author can see that a different rounding mode in their
   own software would print a different number.
 - **mismatch**: the pipeline produces a different value; report both, with
@@ -306,7 +341,9 @@ These bind all three capabilities.
   write-boundary hook looks for it, carrying an author-named proposal
   directory as its single line (`SKILL.md` owns that lifecycle) — and the
   machine-readable companion (`references/verification-report.md`), which
-  lives in the selected proposal directory. The generative capabilities author new files only, a new
+  lives in the selected proposal directory, plus, for a pipeline that
+  writes, the redirected outputs or disposable copy of step 4, also in
+  the proposal directory, with the copy removed at teardown. The generative capabilities author new files only, a new
   plotting or analysis script and its outputs, in a clearly labeled proposal
   location (a directory the author names, or a `facts-and-figures-out/` scratch
   directory); the author's tracked files stay exactly as they were, and a
