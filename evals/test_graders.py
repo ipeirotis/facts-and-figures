@@ -346,6 +346,19 @@ MUTATIONS = [
     ("wave-2 absence recorded in data_versions", [], "mock_good.json",
      lambda d: d["data_versions"].update(
          {"data/wave2_followup.csv": "not distributed - nothing to hash"}), 0),
+    # the gate path's attribution must be bounded like the normal path:
+    # a lookalike filename must not exempt itself as the wave-2 record's
+    # own legitimate source
+    ("gate wave-2 reason citing a lookalike of its own source", ["--gate"],
+     "mock_gate.json",
+     lambda d: [r.update(reason="data/not_wave2_followup.csv is missing")
+                for r in d["values"] if r.get("reported") == "64%"], 1),
+    # ...while the wave-2 record citing its real keyed source stays
+    # legitimate on the gate path
+    ("gate wave-2 reason citing its real source", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="data/wave2_followup.csv is not distributed; "
+                                "nothing was computed")
+                for r in d["values"] if r.get("reported") == "64%"], 0),
 ]
 
 

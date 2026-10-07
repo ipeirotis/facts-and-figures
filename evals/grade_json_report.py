@@ -91,6 +91,14 @@ def names_file(name, text):
     return bool(re.search(r"(?<![\w.-])" + base + r"(?!\w)", text))
 
 
+def names_stem(stem, text):
+    """Bounded source-stem match, the one definition both grading paths
+    use: the keyed stem appears as its own token, not inside a longer
+    filename — not_wave2_followup.csv does not name wave2_followup."""
+    return bool(re.search(r"(?<![\w.-])" + re.escape(stem.lower()) + r"(?!\w)",
+                          text))
+
+
 def reason_denies(reason, sources=()):
     """True when a reason contradicts the unverifiable classification it
     sits on: it denies the absence, credits the run with success, claims
@@ -455,12 +463,10 @@ def grade_targets(report, expected):
             g.check(not denying, f"{t['id']}: no reason denies the absence",
                     f"reasons: {denying}" if denying else "")
             must = t.get("reason_must_contain", "").lower()
-            # bounded: the stem inside ANOTHER filename
+            # bounded (names_stem): the stem inside ANOTHER filename
             # (not_wave2_followup.csv) names a different file
-            must_rx = (re.compile(r"(?<![\w.-])" + re.escape(must) + r"(?!\w)")
-                       if must else None)
-            g.check(all(must_rx.search(str(r.get("reason", "")).lower()) for r in recs)
-                    if must_rx else True,
+            g.check(all(names_stem(must, str(r.get("reason", "")).lower()) for r in recs)
+                    if must else True,
                     f"{t['id']}: reason names the missing source",
                     f"reasons: {[r.get('reason') for r in recs]}" if must else "")
             # naming the source is not explaining the blockage: a reason
@@ -478,10 +484,10 @@ def grade_targets(report, expected):
             # rejected this for its removed input all along. The entry
             # may be legitimately absent (there is nothing to hash);
             # when present it must record the absence, not a hash
-            if must_rx:
+            if must:
                 dv_entries = [str(v) for k, v in
                               (report.get("data_versions") or {}).items()
-                              if must_rx.search(norm_path(k).lower())]
+                              if names_stem(must, norm_path(k).lower())]
                 faked = [e[:60] for e in dv_entries
                          if re.search(r"[0-9a-f]{40,}", e.lower())
                          or not re.search(
@@ -643,13 +649,17 @@ def grade_gate(report, expected):
         if any(w in reason for w in ("failed gate", "gate failed", "gate failure")):
             continue
         own = rec_targets.get(id(r), set())
-        cited = {tid for tid, src in specific.items() if src and src in reason}
+        # bounded here too: a lookalike filename neither cites the keyed
+        # source nor passes as a record's own — not_wave2_followup.csv
+        # must not exempt itself as the wave-2 record's legitimate source
+        cited = {tid for tid, src in specific.items()
+                 if src and names_stem(src, reason)}
         if cited and not (own & cited):
             misattributed.append(str(r.get("reason"))[:60])
             continue
         own_srcs = [specific[tid] for tid in own if tid in specific]
         stray_files = [f for f in FILE_RX.findall(reason)
-                       if not any(src in f for src in own_srcs)
+                       if not any(names_stem(src, f) for src in own_srcs)
                        and f.split("/")[-1] not in ok_context]
         if stray_files:
             misattributed.append(str(r.get("reason"))[:60])
