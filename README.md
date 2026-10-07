@@ -63,7 +63,7 @@ Register `hooks/write-boundary.sh` as a `PreToolUse` hook in the manuscript repo
 }
 ```
 
-While a run is active (the skill creates `facts-and-figures-out/.active` when its gates pass, and removes it at teardown), the hook denies file edits outside the proposal directory; without the marker it is inert, so ordinary editing sessions in the same repository are unaffected. If the author named a different proposal directory, the marker's single line carries its path and the hook guards that directory — the marker is the only channel for a custom directory, and its creation is refused when the named directory already exists and is not empty. This is a guardrail, not a sandbox — writes made through shell commands are not intercepted, and the skill's master rule remains the primary control.
+While a run is active (the skill creates `facts-and-figures-out/.active` whenever the session can write and the run will author anything — a failed gate that still writes its optional companion included — and removes it at teardown), the hook denies file edits outside the proposal directory; without the marker it is inert, so ordinary editing sessions in the same repository are unaffected. If the author named a different proposal directory, the marker's single line carries its path and the hook guards that directory — the marker is the only channel for a custom directory, and its creation is refused when the named directory already exists and is not empty. This is a guardrail, not a sandbox — writes made through shell commands are not intercepted, and the skill's master rule remains the primary control.
 
 ## What it does
 
@@ -147,6 +147,9 @@ jobs:
           # explicit so a failing claude exit still fails the step when
           # this block is copied into a workflow that drops shell: bash
           set -o pipefail
+          # a committed or leftover companion from an earlier run must
+          # not satisfy the gate below if this run fails to write its own
+          rm -f facts-and-figures-out/verification-report.json
           # the prose capture goes to RUNNER_TEMP, not the checkout root:
           # a shell redirect bypasses the write-boundary hook, and a paper
           # repository may own a file by this name
