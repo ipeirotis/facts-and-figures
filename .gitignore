@@ -2,3 +2,4 @@
 facts-and-figures-out/
 # Output of the eval fixture's pipeline; regenerated on every check.
 evals/fixtures/toy-paper/results/
+__pycache__/
