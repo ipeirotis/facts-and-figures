@@ -205,6 +205,12 @@ MUTATIONS = [
     ("seed denied in the environment field", [], "mock_good.json",
      lambda d: d.update(environment="Python 3.11.15, stdlib only; "
                                     "seed was not 20260816; actual seed 7"), 1),
+    # an affirmative availability claim needs no negation to contradict
+    # the unverifiable classification it sits on
+    ("missing-source reason asserting availability", [], "mock_good.json",
+     lambda d: [r.update(reason="data/wave2_followup.csv is present and verified")
+                for r in d["values"]
+                if r.get("classification") == "unverifiable"], 1),
     # a gate reason citing only the optional wave-2 source manufactures
     # failure provenance for the nine targets the gate did not block
     # through it

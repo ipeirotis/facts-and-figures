@@ -301,9 +301,12 @@ These bind all three capabilities.
   access into industrialized HARKing.
 - **Read and execute, author only new files.** Never modify or overwrite the
   author's code, data, figures, or manuscript. The verification capability
-  writes nothing of the author's: it authors only its run marker and the
-  machine-readable companion (`references/verification-report.md`), both in
-  the proposal directory. The generative capabilities author new files only, a new
+  writes nothing of the author's: it authors only its run marker — always at
+  the fixed coordination path `facts-and-figures-out/.active` where the
+  write-boundary hook looks for it, carrying an author-named proposal
+  directory as its single line (`SKILL.md` owns that lifecycle) — and the
+  machine-readable companion (`references/verification-report.md`), which
+  lives in the selected proposal directory. The generative capabilities author new files only, a new
   plotting or analysis script and its outputs, in a clearly labeled proposal
   location (a directory the author names, or a `facts-and-figures-out/` scratch
   directory); the author's tracked files stay exactly as they were, and a

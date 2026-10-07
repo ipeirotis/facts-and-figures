@@ -55,13 +55,15 @@ NEG_ABSENCE_RE = re.compile(
     r"\b(?:not|no longer|no|never|isn.?t|wasn.?t|aren.?t|weren.?t)\s+"
     r"(?:missing|unavailable|unreachable|absent|removed)\b")
 
-# a gate reason crediting the gate or the pipeline with success
+# a reason crediting the gate or pipeline with success — or asserting
+# that its blocking source was present, available, or verified —
 # contradicts the unverifiable classification it sits on, whatever
 # vocabulary it also carries. Adjacency keeps negations safe: "the gate
-# never passed" does not match
+# never passed" and "is not present" do not match
 GATE_SUCCESS_RE = re.compile(
     r"\b(?:gate|pipeline|run|computation|check)s?\s+(?:succeeded|passed)\b"
-    r"|\bvalue\s+is\s+valid\b")
+    r"|\bvalue\s+is\s+valid\b"
+    r"|\b(?:is|are|was|were|remains?)\s+(?:present|available|verified|intact)\b")
 TOP_REQUIRED = ("schema", "skill_version", "manuscript_files", "pipeline_command",
                 "environment", "data_versions", "values")
 
