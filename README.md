@@ -130,6 +130,33 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: 22}
       - run: npm install -g @anthropic-ai/claude-code
+      - name: register the write-boundary hook
+        # a plain-skill install leaves the hook a separate opt-in, so the
+        # workflow registers it itself — without this the run has only
+        # the skill's own discipline, not the mechanical guard. If your
+        # repository already carries a .claude/settings.json, merge the
+        # registration from the hook section above instead of this step
+        run: |
+          mkdir -p .claude
+          if [ ! -f .claude/settings.json ]; then
+            cat > .claude/settings.json <<'JSON'
+          {
+            "hooks": {
+              "PreToolUse": [
+                {
+                  "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+                  "hooks": [
+                    {
+                      "type": "command",
+                      "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/skills/facts-and-figures/hooks/write-boundary.sh"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+          JSON
+          fi
       - name: run verification
         shell: bash
         env:
@@ -170,12 +197,26 @@ jobs:
           python3 -c "
           import json, sys
           r = json.load(open('facts-and-figures-out/verification-report.json'))
+          # shape before policy: a malformed companion must not pass the
+          # gate on records that carry a classification and nothing else
+          missing = [k for k in ('schema', 'manuscript_files', 'pipeline_command',
+                                 'environment', 'data_versions') if not r.get(k)]
           vals = r.get('values') or []
           # an empty report verified nothing; completeness beyond that is
           # your spot check against the manuscript, since a real paper has
           # no answer key
-          if not vals:
-              print('verification report contains no value records'); sys.exit(1)
+          if missing or not vals:
+              print('malformed report:', missing or 'no value records'); sys.exit(1)
+          shapeless = [v for v in vals
+                       if not (v.get('location') and v.get('reported')
+                               and v.get('classification'))
+                       or (v.get('classification') in ('match', 'mismatch')
+                           and (v.get('computed') is None or not v.get('tolerance')
+                                or not v.get('producing_command')))
+                       or (v.get('classification') == 'unverifiable'
+                           and not v.get('reason'))]
+          if shapeless:
+              print('records missing required fields:', shapeless[:2]); sys.exit(1)
           bad = [v for v in vals if v['classification'] != 'match']
           for v in bad: print(v['classification'], v['reported'], '-', v['location'])
           print(f'{len(vals)} values checked, {len(bad)} not a clean match')

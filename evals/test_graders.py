@@ -417,6 +417,23 @@ MUTATIONS = [
      lambda d: d["values"].append(
          {**[v for v in d["values"] if v.get("reported") == "6.23"][0],
           "location": "manuscript.md, Abstract"}), 0),
+    # the file scan has no meaningful extension-length ceiling
+    ("gate reasons citing a long-extension file", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="appendix.markdown is missing")
+                for r in d["values"]], 1),
+    # a disclaimed section is not traceability
+    ("locations disclaiming their section", [], "mock_good.json",
+     lambda d: [r.update(location="manuscript.md, not Results")
+                for r in d["values"]], 1),
+    # ...while a truthful section beside a disclaimed one still locates
+    ("location naming Data while disclaiming Results", [], "mock_good.json",
+     lambda d: [r.update(location="manuscript.md, Data, not Results")
+                for r in d["values"] if r.get("reported") == "71.48"], 0),
+    # the seed digits without a seed label are an identifier, not RNG
+    # provenance
+    ("seed digits labeled as a build number", [], "mock_good.json",
+     lambda d: d.update(environment="Python 3.11.15, stdlib only; "
+                                    "build 20260816"), 1),
 ]
 
 

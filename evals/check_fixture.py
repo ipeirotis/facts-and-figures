@@ -23,6 +23,7 @@ Exit code 0 iff every check passes.
 """
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -90,6 +91,18 @@ def main():
         # does not satisfy a probe for 40 as a substring
         from grade_json_report import anchor_rx
         manuscript = (fixture / "manuscript.md").read_text().lower()
+        # the manuscript split by heading, so the keyed `sections` field —
+        # the location grader's ground truth — is itself held to the text:
+        # a document-wide any() let one of two occurrences drift silently
+        sections = {}
+        heading = ""
+        for ln in manuscript.splitlines():
+            m = re.match(r"#{1,6}\s+(.+?)\s*$", ln)
+            if m:
+                heading = m.group(1).strip()
+                sections.setdefault(heading, [])
+            else:
+                sections.setdefault(heading, []).append(ln)
         for t in expected["targets"]:
             # value-bearing probes only: the keyed value and the anchors
             # that carry a digit — a prose anchor like "flagged" survives
@@ -99,6 +112,13 @@ def main():
             hit = any(anchor_rx(p).search(manuscript) for p in probes)
             check(hit, f"{t['id']}: manuscript still states the keyed value",
                   f"none of {probes[:3]}... found" if not hit else "")
+            # ...and states it in EVERY keyed section: drifting one of
+            # two occurrences must fail here, not survive on the other
+            for sec in t.get("sections", []):
+                body = "\n".join(sections.get(sec.lower(), []))
+                hit_s = any(anchor_rx(p).search(body) for p in probes)
+                check(hit_s, f"{t['id']}: the {sec} section still states the keyed value",
+                      "" if hit_s else f"none of {probes[:3]} under the {sec} heading")
             # a bundled claim must survive as ONE claim: after drifting
             # the Data sentence to "20 ... and 30 without", other 20s
             # elsewhere keep a document-wide count above two, so some
