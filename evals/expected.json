@@ -10,6 +10,7 @@
   "targets": [
     {
       "id": "sample-size",
+      "sections": ["abstract", "data"],
       "location": "manuscript.md, Abstract and Data",
       "manuscript_value": 40,
       "decimals": 0,
@@ -23,6 +24,7 @@
     },
     {
       "id": "group-split",
+      "sections": ["data", "results"],
       "location": "manuscript.md, Data",
       "manuscript_value": 20,
       "decimals": 0,
@@ -39,6 +41,7 @@
     },
     {
       "id": "overall-mean",
+      "sections": ["data"],
       "location": "manuscript.md, Data",
       "manuscript_value": 71.48,
       "decimals": 2,
@@ -52,6 +55,7 @@
     },
     {
       "id": "mean-experienced",
+      "sections": ["results"],
       "location": "manuscript.md, Results",
       "manuscript_value": 74.64,
       "decimals": 2,
@@ -65,6 +69,7 @@
     },
     {
       "id": "mean-inexperienced",
+      "sections": ["results"],
       "location": "manuscript.md, Results",
       "manuscript_value": 68.32,
       "decimals": 2,
@@ -78,6 +83,7 @@
     },
     {
       "id": "diff-of-means",
+      "sections": ["abstract", "results"],
       "location": "manuscript.md, Abstract and Results",
       "manuscript_value": 6.23,
       "decimals": 2,
@@ -92,6 +98,7 @@
     },
     {
       "id": "flagged-share",
+      "sections": ["data"],
       "location": "manuscript.md, Data",
       "manuscript_value": 13,
       "decimals": 0,
@@ -107,6 +114,7 @@
     },
     {
       "id": "wave2-retention",
+      "sections": ["results"],
       "location": "manuscript.md, Results",
       "manuscript_value": 64,
       "decimals": 0,
@@ -122,6 +130,7 @@
     },
     {
       "id": "perm-count",
+      "sections": ["results"],
       "location": "manuscript.md, Results",
       "manuscript_value": 10000,
       "decimals": 0,
@@ -137,6 +146,7 @@
     },
     {
       "id": "perm-p",
+      "sections": ["abstract", "results"],
       "location": "manuscript.md, Abstract and Results",
       "manuscript_value": "p < 0.001",
       "unit": "probability",

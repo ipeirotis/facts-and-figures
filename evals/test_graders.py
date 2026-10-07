@@ -326,6 +326,26 @@ MUTATIONS = [
                                            "in data/workers.csv\"")
                 for r in d["values"]
                 if r.get("reported") == "20 / 20"], 0),
+    # a Data-only value located in Results sends the author to the wrong
+    # section — the location must name a section carrying the value
+    ("every location relocated to Results", [], "mock_good.json",
+     lambda d: [r.update(location="manuscript.md, Results")
+                for r in d["values"]], 1),
+    # ...while a genuine second occurrence outside the keyed location
+    # stays legitimate, as a live run located the group split in Results
+    ("group split located at its Results occurrence", [], "mock_good.json",
+     lambda d: [r.update(location="manuscript.md, Results") for r in d["values"]
+                if r.get("reported") == "20 / 20"], 0),
+    # a digest asserted for the source the record itself classifies as
+    # unavailable is an uncomputed hash — the gate path has rejected
+    # this for its removed input all along
+    ("digest asserted for the unavailable wave-2 source", [], "mock_good.json",
+     lambda d: d["data_versions"].update(
+         {"data/wave2_followup.csv": "sha256:" + "ab" * 32}), 1),
+    # ...while an entry recording the absence is legitimate provenance
+    ("wave-2 absence recorded in data_versions", [], "mock_good.json",
+     lambda d: d["data_versions"].update(
+         {"data/wave2_followup.csv": "not distributed - nothing to hash"}), 0),
 ]
 
 

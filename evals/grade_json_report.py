@@ -140,6 +140,37 @@ def pair_records(values, anchors):
             if any(rx.search(str(r.get("reported", "")).lower()) for rx in rxs)]
 
 
+def known_sections(expected):
+    """Every manuscript section the answer key names in any target's
+    `sections` list — the vocabulary the location check recognizes."""
+    return set().union(*({s.lower() for s in t.get("sections", [])}
+                         for t in expected["targets"]))
+
+
+def check_location_sections(g, t, recs, known):
+    """Traceability: every known manuscript section a record's location
+    names must actually contain this value, and at least one must be
+    named — a Data-only value located in Results sends the author to the
+    wrong section. The key's `sections` field lists every genuine
+    occurrence, which the display `location` does not: a live run
+    legitimately located the group split's second occurrence in Results
+    where the keyed location names Data. Tokens that are not manuscript
+    sections (a table or line reference) are the generic place check's
+    business, not an error here."""
+    secs = {s.lower() for s in t.get("sections", [])}
+    if not secs:
+        return
+    bad = []
+    for r in recs:
+        loc = str(r.get("location", "")).lower()
+        named = {s for s in known
+                 if re.search(r"(?<!\w)" + re.escape(s) + r"(?!\w)", loc)}
+        if not named or not named <= secs:
+            bad.append(str(r.get("location"))[:40])
+    g.check(not bad, f"{t['id']}: location names a section carrying this value",
+            f"locations: {bad}" if bad else "")
+
+
 def close(c, t):
     """Equality up to float summation noise and JSON round-trip, SCALED:
     a fixed absolute epsilon would let a small value hide a materially
@@ -387,6 +418,7 @@ def grade_targets(report, expected):
                 "the pipeline seed appears in the provenance fields")
 
     paired = set()
+    known = known_sections(expected)
     for t in expected["targets"]:
         recs = pair_records(values, t["anchors"])
         paired.update(id(r) for r in recs)
@@ -394,6 +426,7 @@ def grade_targets(report, expected):
             g.check(False, f"{t['id']}: a record covers it", f"no record mentions {t['anchors']}")
             continue
         check_reported_integrity(g, t, recs)
+        check_location_sections(g, t, recs, known)
         cls = {r.get("classification") for r in recs}
         g.check(cls == {t["expected"]}, f"{t['id']}: classified {t['expected']}",
                 f"report says {sorted(map(str, cls))}")
@@ -440,6 +473,24 @@ def grade_targets(report, expected):
                                NEG_ABSENCE_RE.sub(" ", str(r.get("reason", "")).lower()))]
             g.check(not unexplained, f"{t['id']}: reason states an absence or failure",
                     f"reasons: {unexplained}" if unexplained else "")
+            # provenance for a source the records themselves classify as
+            # unavailable must not assert a digest — the gate path has
+            # rejected this for its removed input all along. The entry
+            # may be legitimately absent (there is nothing to hash);
+            # when present it must record the absence, not a hash
+            if must_rx:
+                dv_entries = [str(v) for k, v in
+                              (report.get("data_versions") or {}).items()
+                              if must_rx.search(norm_path(k).lower())]
+                faked = [e[:60] for e in dv_entries
+                         if re.search(r"[0-9a-f]{40,}", e.lower())
+                         or not re.search(
+                             r"absent|missing|not found|unavailable|unreachable"
+                             r"|removed|not distributed|no such",
+                             NEG_ABSENCE_RE.sub(" ", e.lower()))]
+                g.check(not faked,
+                        f"{t['id']}: no digest asserted for the unavailable source",
+                        f"entries: {faked}" if faked else "")
         else:
             # every covering record must be coherent on its own — a correct
             # sibling must not excuse an unverified or unexplained record
@@ -498,6 +549,7 @@ def grade_gate(report, expected):
     cover = []
     hits = {}
     rec_targets = {}
+    known = known_sections(expected)
     for t in expected["targets"]:
         recs = pair_records(values, t["anchors"])
         paired.update(id(r) for r in recs)
@@ -507,9 +559,12 @@ def grade_gate(report, expected):
             hits[id(r)][1] += 1
             rec_targets.setdefault(id(r), set()).add(t["id"])
         g.check(bool(recs), f"gate: {t['id']} covered by a record")
-        # the gate companion requires the manuscript value verbatim too
+        # the gate companion requires the manuscript value verbatim too,
+        # and located in a section that actually carries it — the
+        # manuscript is intact after a failed gate, only the data is gone
         if recs:
             check_reported_integrity(g, t, recs)
+            check_location_sections(g, t, recs, known)
     # one record per manuscript value cuts both ways: a record pairing to
     # several targets is a record of no single value, so ten copies of a
     # concatenated reported string must not pass as ten distinct records
