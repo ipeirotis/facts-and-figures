@@ -26,6 +26,9 @@ Codex review findings on the skill as vendored into a manuscript repository (Ili
 - Scientific notation at the bottom of a decade gets an asymmetric interval: a mantissa of exactly 1 takes its lower endpoint from the decade below (`|m| - u/20`), so `1.0 × 10^3` accepts `[995, 1050)` and no longer certifies `960`, which displays as `9.6 × 10^2`.
 - The disposable copy is used only after confirming that every write resolves inside the copy or the proposal directory; an absolute output path, an environment-configured cache path, or a copied symlink can lead a copy's writes back into the author's checkout.
 
+- The run marker's exclusive create names `os.open(..., O_CREAT | O_EXCL)`, which fails on any existing node; Bash's `noclobber` refuses only regular files and blocks on a FIFO at the marker path.
+- An archived export of time-travel rows pins the data only when a logged command reruns the pipeline (or the producing step) against it; a pipeline hard-wired to the time-travel query needs the table snapshot.
+
 ## [0.5.0] - 2026-10-07
 
 Completes the roadmap's items 4 and 5: the repository is now a Claude Code plugin, and verification is scriptable end to end. Minor bump: the output contract gains the machine-readable companion.

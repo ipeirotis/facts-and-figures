@@ -155,8 +155,11 @@ output location) plus:
   before the window closes: a table snapshot taken from it, written under
   the output rule at the end of this file and with the author's go-ahead,
   or an export of the rows read, archived in the proposal directory with its
-  hash. Without a durable pin, report the result as unverifiable rather than
-  as verified, and say why.
+  hash. An export counts only when a logged command reruns the pipeline (or
+  the step that produces the value) against it; a pipeline hard-wired to
+  the time-travel query cannot, so for it only the snapshot pins. Without a
+  durable pin, report the result as unverifiable rather than as verified,
+  and say why.
 - **Commands with the secrets taken out.** A logged command is only useful
   if the author can paste it back, and only safe if it carries no secret. A
   pipeline invoked with a connection string, a signed URL, an API key, or a
