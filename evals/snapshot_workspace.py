@@ -78,9 +78,13 @@ def main():
             # with a hard link to a byte-identical copy under the pruned
             # proposal directory leaves content and mode unchanged, but
             # the author file would then share an inode with generated
-            # work — only the raised link count betrays it
+            # work — only the raised link count betrays it. The
+            # modification time catches what content hashing cannot: a
+            # touch, or a rewrite with identical bytes, still modified
+            # the author's file
             links = st.st_nlink if kind == "f" else "-"
-            inventory.append(f"{kind} {oct(stat.S_IMODE(st.st_mode))[2:]} {links} {rel} -> {target}")
+            inventory.append(f"{kind} {oct(stat.S_IMODE(st.st_mode))[2:]} {links} "
+                             f"{st.st_mtime_ns} {rel} -> {target}")
             if kind == "f":
                 hashes.append((rel, f"{sha256(full)}  {rel}"))
 

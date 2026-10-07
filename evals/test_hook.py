@@ -249,6 +249,32 @@ def main():
               write_payload(fproj, fproj / "facts-and-figures-out" / "s.py"), fproj,
               want_deny=False)
 
+        # a marker whose line carries an embedded NUL is planted garbage:
+        # the hook must fall back to the default proposal directory, not
+        # crash into a non-blocking hook error that lets the write through
+        marker.write_text("data\x00evil\n")
+        check("marker with NUL content: manuscript write still denied",
+              write_payload(proj, proj / "manuscript.md"), proj, want_deny=True)
+        check("marker with NUL content: default proposal write allowed",
+              write_payload(proj, proj / "facts-and-figures-out" / "s.py"), proj,
+              want_deny=False)
+        marker.write_text("")
+
+        # the session may work in a linked worktree while the
+        # CLAUDE_PROJECT_DIR environment variable stays at the original
+        # checkout: the marker in the worktree (the payload cwd) must
+        # still arm the guard there
+        oproj = Path(home_base) / "orig"
+        (oproj / "facts-and-figures-out").mkdir(parents=True)
+        wproj = Path(home_base) / "wt"
+        (wproj / "facts-and-figures-out").mkdir(parents=True)
+        (wproj / "facts-and-figures-out" / ".active").touch()
+        check("worktree cwd with marker: outside write denied despite stale env root",
+              write_payload(wproj, wproj / "manuscript.md"), oproj, want_deny=True)
+        check("worktree cwd with marker: proposal write allowed",
+              write_payload(wproj, wproj / "facts-and-figures-out" / "s.py"), oproj,
+              want_deny=False)
+
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)
         check("TMPDIR inside project: data write still denied",

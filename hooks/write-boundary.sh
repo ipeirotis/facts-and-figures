@@ -47,8 +47,25 @@ tool = payload.get("tool_name", "")
 if tool not in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
     sys.exit(0)
 
-project = os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd") or os.getcwd()
-project = os.path.realpath(project)
+# prefer the root whose marker exists: in a linked worktree the
+# CLAUDE_PROJECT_DIR environment variable stays at the original checkout
+# while the session works in — and creates its marker in — the worktree
+# the payload cwd names; judging only the original root would leave the
+# worktree manuscript unguarded
+candidates = []
+for c in (os.environ.get("CLAUDE_PROJECT_DIR") or "", payload.get("cwd") or ""):
+    if not c:
+        continue
+    c = os.path.realpath(c)
+    if c not in candidates:
+        candidates.append(c)
+if not candidates:
+    candidates.append(os.path.realpath(os.getcwd()))
+project = candidates[0]
+for c in candidates:
+    if os.path.lexists(os.path.join(c, "facts-and-figures-out", ".active")):
+        project = c
+        break
 marker = os.path.join(project, "facts-and-figures-out", ".active")
 
 tool_input = payload.get("tool_input") or {}
@@ -105,6 +122,12 @@ try:
     with open(marker) as f:
         named = f.readline().strip()
 except Exception:
+    named = ""
+# a marker line carrying an embedded NUL or absurd length is planted
+# garbage: fall back to the default proposal directory instead of
+# crashing on path resolution — Claude Code treats a hook error as
+# non-blocking and would let the intercepted write through
+if "\x00" in named or len(named) > 4096:
     named = ""
 out_dir = named or os.environ.get("FACTS_AND_FIGURES_OUT", "") or "facts-and-figures-out"
 proposal_lexical = os.path.normpath(os.path.join(project, out_dir))
