@@ -449,6 +449,22 @@ MUTATIONS = [
     ("data_versions entry for a relocated wave-2 path", [], "mock_good.json",
      lambda d: d["data_versions"].update(
          {"unrelated/wave2_followup.csv": "absent - not distributed"}), 1),
+    # a file a location names must be a scoped manuscript file
+    ("locations citing an unscoped file", [], "mock_good.json",
+     lambda d: [r.update(location=str(r["location"]).replace(
+         "manuscript.md", "fabricated.tex")) for r in d["values"]], 1),
+    # ...while locating by section alone is the live runs' own shape
+    ("locations by bare section", [], "mock_good.json",
+     lambda d: [r.update(location=str(r["location"]).replace(
+         "manuscript.md, ", "")) for r in d["values"]], 0),
+    # a command that merely prints the script name runs nothing
+    ("pipeline_command wrapped in echo", [], "mock_good.json",
+     lambda d: d.update(pipeline_command="echo analysis/run_analysis.py"), 1),
+    # a version the keyed python3 pipeline could not run under cannot
+    # describe the run
+    ("environment claiming an impossible interpreter", [], "mock_good.json",
+     lambda d: d.update(environment="Python 0.0, stdlib only; "
+                                    "seed 20260816"), 1),
     # a one-letter extension is still a filename when the stem is real,
     # and a dotfile is a filename with no stem at all
     ("gate reasons citing a single-letter-extension file", ["--gate"],

@@ -88,6 +88,17 @@ EXPLAINS_RE = re.compile(
 # sentence-final period after the name is ordinary prose and must pass
 NAME_END = r"(?![\w-])(?!\.[a-z0-9])"
 
+# any filename-shaped token, not a hard-coded extension list — a reason
+# or location citing appendix.tex, appendix.markdown, helper.R or .env
+# names a file as surely as README.md does. Prose idioms stay excluded:
+# a single-letter extension needs a stem of at least two characters (so
+# e.g and i.e do not read as files) and must be a letter (so no.1 does
+# not); the upper bound only stops runaway tokens, never a real
+# extension
+FILE_RX = re.compile(r"[\w./-]*\w\.[a-z][a-z0-9]{1,11}\b"
+                     r"|[\w./-]*\w\w\.[a-z]\b"
+                     r"|(?<![\w.-])\.[a-z][a-z0-9]{1,11}\b")
+
 
 def names_file(name, text):
     """Bounded filename match, the one definition both grading paths
@@ -316,9 +327,14 @@ def grade_top_level(g, report, expected):
     # script; output-directory arguments remain legitimate
     script = str(expected.get("pipeline_command", "")).split()[-1] if expected.get("pipeline_command") else ""
     if script:
-        got_cmd = str(report.get("pipeline_command", ""))
-        g.check(script in got_cmd, "pipeline_command invokes the canonical pipeline script",
-                "" if script in got_cmd else repr(got_cmd)[:60])
+        # the same two-part tripwire the producing-command check uses:
+        # the canonical script AND the runtime token — "echo
+        # analysis/run_analysis.py" prints a filename, it runs nothing
+        got_cmd = str(report.get("pipeline_command", "")).lower()
+        token = str(expected.get("producing_command_must_contain", "")).lower()
+        ok_pc = script in got_cmd and (not token or token in got_cmd)
+        g.check(ok_pc, "pipeline_command invokes the canonical pipeline script",
+                "" if ok_pc else repr(got_cmd)[:60])
     values = report.get("values") or []
     bad = [i for i, r in enumerate(values)
            if any(not str(r.get(k) or "").strip() for k in RECORD_REQUIRED)]
@@ -351,7 +367,12 @@ def grade_top_level(g, report, expected):
     # the environment field must name the actual, versioned runtime —
     # "unknown" or a bare "python" supports no reproduction
     env = str(report.get("environment", "")).lower()
-    versioned = bool(re.search(r"python\s*[0-9]", env))
+    # a version the keyed python3 pipeline could not run under is not a
+    # description of the run: "Python 0.0" wears the version shape while
+    # naming an impossible runtime. Exact-version verification would
+    # need the harness to record the measured interpreter; this bound
+    # rejects only what cannot be true
+    versioned = bool(re.search(r"python\s*(?:[3-9]|\d\d)", env))
     g.check(versioned, "environment names a versioned interpreter",
             "" if versioned else repr(env)[:60])
     # a location must name a section-level place the author can look up —
@@ -371,6 +392,17 @@ def grade_top_level(g, report, expected):
                            for tok in place_tokens)]
     g.check(not bad_locs, "record locations identify a manuscript place",
             f"unusable locations: {bad_locs[:3]}" if bad_locs else "")
+    # a location may locate by section alone, as the live runs did, but
+    # any FILE it names must be a scoped manuscript file — a location of
+    # "fabricated.tex, Results" certifies traceability to a document the
+    # scope does not contain
+    man_files = {norm_path(m).split("/")[-1].lower()
+                 for m in expected.get("manuscript_files", [])}
+    bad_files = [r.get("location") for r in values
+                 if any(f.split("/")[-1] not in man_files
+                        for f in FILE_RX.findall(str(r.get("location", "")).lower()))]
+    g.check(not bad_files, "location files are scoped manuscript files",
+            f"locations: {bad_files[:3]}" if bad_files else "")
     # an EXACT copy of a record double-counts a checked value and adds no
     # information — the schema has one record per manuscript value. Two
     # records for two occurrences of the same value are legitimate and
@@ -691,16 +723,6 @@ def grade_gate(report, expected):
     # script, the pipeline output file, and the manuscript itself — all
     # from existing key fields. Anything else (README.md, a lookalike
     # dataset) is fabricated blockage
-    # any filename-shaped token, not a hard-coded extension list — a
-    # reason blaming appendix.tex, appendix.markdown, helper.R or .env
-    # fabricates blockage as surely as one blaming README.md. Prose
-    # idioms stay excluded: a single-letter extension needs a stem of at
-    # least two characters (so e.g and i.e do not read as files) and
-    # must be a letter (so no.1 does not); the upper bound only stops
-    # runaway tokens, never a real extension
-    FILE_RX = re.compile(r"[\w./-]*\w\.[a-z][a-z0-9]{1,11}\b"
-                         r"|[\w./-]*\w\w\.[a-z]\b"
-                         r"|(?<![\w.-])\.[a-z][a-z0-9]{1,11}\b")
     ok_context = (str(expected.get("pipeline_command", "")) + " "
                   + str(expected.get("results_file", "")) + " "
                   + " ".join(expected.get("manuscript_files", []))).lower()
