@@ -60,13 +60,16 @@ python3 evals/grade_report.py --gate <workspace>/report.md   # gate case
 The workspaces receive the fixture and the skill's runtime files only —
 never this directory, which contains the answer key.
 
-The verification case is graded twice: the prose report by
-`grade_report.py` (keyword-based), and the machine-readable companion the
-skill writes to `facts-and-figures-out/verification-report.json` by
-`grade_json_report.py`, which is exact on classifications, boundary flags,
-and computed values. A missing JSON companion is itself a failure, since
-the workspace is writable and `references/verification-report.md` mandates
-it there.
+The verification case is graded twice, with a clear division of labor:
+`grade_report.py` grades the prose structurally — the four sections of the
+return contract, coverage of every target, the boundary-tie disclosure —
+and `grade_json_report.py` grades the machine-readable companion the skill
+writes to `facts-and-figures-out/verification-report.json` exactly:
+classifications, boundary flags, computed values, and the conditional
+fields (tolerance, producing command, reason) on the record that carries
+each value. A missing JSON companion is itself a failure, since the
+workspace is writable and `references/verification-report.md` mandates it
+there.
 
 ## CI
 
@@ -78,16 +81,16 @@ secret and skips with a notice when the secret is absent.
 
 ## Honesty notes
 
-- Grading is keyword-based and coarse: it anchors on the manuscript's
-  value strings and checks the classification word nearby. Prose that
-  legitimately references another target's verdict on the same line
-  ("not as a match or mismatch", cross-value arithmetic) surfaces as WARN,
-  not FAIL. A FAIL deserves a human read of the report before it is
-  believed. Exact grading arrives with the machine-readable report
-  (TASKS.md item 5).
-- A PASS on the planted defects is meaningful despite that coarseness: a
-  report that calls the transposed 6.23 a match, resolves the 12.5%
-  boundary tie silently, or produces a value for the undistributed wave-2
-  file cannot pass.
+- Prose verdicts are not graded, by design. Two live runs each broke
+  keyword verdict-classification in a different way (verdict-grouped
+  tables whose rows carry no verdict word; discussion lines like "not a
+  mismatch" quoting other targets), so verdicts are graded exactly on the
+  machine-readable companion, and the prose is held to structure,
+  coverage, and the boundary disclosure. The schema requires the two
+  reports to agree; a disagreement is a defect of the run that prose
+  keyword-matching cannot reliably detect.
+- A PASS on the planted defects is meaningful: a JSON report that calls
+  the transposed 6.23 a match, resolves the 12.5% boundary tie silently,
+  or produces a value for the undistributed wave-2 file cannot pass.
 - The fixture is synthetic and says so in its own manuscript, AGENTS.md,
   and README. Do not reuse it as an example of real results.

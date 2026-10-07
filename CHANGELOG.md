@@ -26,6 +26,7 @@ Review findings on the pull request, each verified before fixing:
 - `README.md` qualifies parallel fan-out: concurrent runs need per-run proposal directories (`FACTS_AND_FIGURES_OUT`) or separate checkouts, since the default directory would share one marker and one `verification-report.json`.
 - The answer key gains the two pipeline-backed counts the manuscript also reports — the 40-worker sample size and the 10,000 permutations — so omitting them can no longer pass unnoticed, and both prose graders now require all four sections of the return contract to be present.
 - The gate-case contract is stated precisely in the eval docs: no value may be classified as match or mismatch after a failed gate; a blanket unverifiable naming the missing input is the correct outcome (what the live run produced, and what the grader accepts).
+- Prose verdict-classification is retired from the keyword grader after a second live run broke it a second way (verdict-grouped tables whose rows carry no verdict word, on top of the earlier cross-value discussion lines). Verdicts are graded exactly on the machine-readable companion — including the conditional fields, which must sit on the record carrying each value — and the prose grader holds reports to structure, target coverage, and the boundary disclosure. All three artifacts of the second live run grade PASS under the split.
 
 ### Changed
 

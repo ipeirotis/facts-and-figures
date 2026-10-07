@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
-"""Grade an agent's verification report against expected.json.
+"""Grade an agent's prose verification report against expected.json.
 
-Keyword grading, and honestly coarse: for each target it finds report lines
-containing one of the target's anchor strings and checks that the expected
-classification word appears nearby; stray verdict words from neighboring
-prose surface as WARN, not FAIL. It will be
-replaced by exact comparison once the skill emits a machine-readable report
-(TASKS.md item 5). A FAIL therefore deserves a human read of the report
-before it is believed; a PASS on the planted defects is meaningful, since a
-report that misclassifies the mismatch or fabricates the unverifiable value
-cannot pass.
+Structural grading only. Two live runs showed that classifying verdicts
+out of free prose is unreliable against real report formats — one agent
+grouped its results under verdict headings whose table rows carry no
+verdict word, another discussed targets inside other targets' explanations
+("not a mismatch", cross-value arithmetic) — so verdict-by-verdict grading
+lives in grade_json_report.py, which reads the machine-readable companion
+the skill mandates. Here the prose must carry the four sections of the
+return contract, mention every target, and disclose the boundary tie.
 
 Usage:
   python3 evals/grade_report.py REPORT.md [EXPECTED.json]
   python3 evals/grade_report.py --gate REPORT.md [EXPECTED.json]
 
---gate grades the gate case instead: the report must name the removed input
-and must not classify any manuscript value.
-Exit code 0 iff every required check passes.
+--gate grades the gate case instead: the report must name the removed
+input, state that it is missing, and classify no value as match or
+mismatch. Exit code 0 iff every required check passes.
 """
 
 import json
@@ -26,7 +25,7 @@ import sys
 from pathlib import Path
 
 EVALS = Path(__file__).resolve().parent
-WINDOW = 3  # lines of context on each side of an anchor line
+WINDOW = 3  # lines of context on each side of an anchor line (gate mode)
 
 CLS_RE = {
     "match": re.compile(r"\bmatch(es|ed)?\b", re.I),
@@ -51,6 +50,10 @@ def grade_sections(report):
     return ok
 
 
+def anchor_lines(lines, anchors):
+    return [i for i, ln in enumerate(lines) if any(a.lower() in ln.lower() for a in anchors)]
+
+
 def classify_text(text):
     """Which classifications does this text assert? mismatch wins over its
     'match' substring because its regex is checked independently."""
@@ -61,43 +64,27 @@ def classify_text(text):
 
 
 def assertions_for(lines, anchors):
-    """Classifications asserted for a target: (found_anchor, classes).
-
-    Anchor-bearing lines are judged on their own first — in list-style
-    reports every line is self-contained, and a context window would let a
-    neighboring target's verdict bleed in. Surrounding windows are
-    consulted only when no anchor line carries any verdict at all (prose
-    reports that state the classification a line or two away).
-    """
-    hits = [i for i, ln in enumerate(lines) if any(a.lower() in ln.lower() for a in anchors)]
+    """Classifications asserted near a target's anchors (gate mode only,
+    where any match/mismatch at all is the failure being looked for)."""
+    hits = anchor_lines(lines, anchors)
     line_level = set().union(*(classify_text(lines[i]) for i in hits)) if hits else set()
     if line_level:
-        return True, line_level
+        return line_level
     windowed = set()
     for i in hits:
         windowed |= classify_text("\n".join(lines[max(0, i - WINDOW):i + WINDOW + 1]))
-    return bool(hits), windowed
+    return windowed
 
 
 def grade_targets(report, expected):
     lines = report.splitlines()
     ok = grade_sections(report)
     for t in expected["targets"]:
-        found, asserted = assertions_for(lines, t["anchors"])
-        if not found:
+        if anchor_lines(lines, t["anchors"]):
+            print(f"PASS  {t['id']}: covered by the report")
+        else:
             print(f"FAIL  {t['id']}: no report line mentions any anchor {t['anchors']}")
             ok = False
-        elif t["expected"] not in asserted:
-            print(f"FAIL  {t['id']}: expected '{t['expected']}', report asserts {sorted(asserted) or 'nothing'}")
-            ok = False
-        else:
-            print(f"PASS  {t['id']}: classified {t['expected']}")
-            extras = asserted - {t["expected"]}
-            if extras:
-                # prose legitimately mentions other targets' verdicts on the
-                # same line ("not as a match or mismatch", cross-value
-                # arithmetic), so stray verdict words warn rather than fail
-                print(f"WARN  {t['id']}: other verdict words near an anchor {sorted(extras)}; confirm by reading the report")
         if t.get("boundary"):
             if BOUNDARY_RE.search(report):
                 print(f"PASS  {t['id']}: boundary case disclosed")
@@ -123,8 +110,7 @@ def grade_gate(report, expected):
         ok = False
     lines = report.splitlines()
     for t in expected["targets"]:
-        _, asserted = assertions_for(lines, t["anchors"])
-        asserted -= {"unverifiable"}
+        asserted = assertions_for(lines, t["anchors"]) - {"unverifiable"}
         if asserted:
             print(f"FAIL  gate: {t['id']} classified {sorted(asserted)} despite failed gate")
             ok = False

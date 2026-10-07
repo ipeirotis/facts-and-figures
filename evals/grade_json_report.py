@@ -40,7 +40,12 @@ def pair_records(values, anchors):
 
 def computed_matches(computed, target):
     """The record's computed value must equal the documented true value; a
-    percent target may be recorded in either unit (0.125 or 12.5)."""
+    percent target may be recorded in either unit (0.125 or 12.5), and a
+    record whose reported claim bundles several quantities (a count and its
+    seed) may carry them as a list — any element equal to the documented
+    value counts."""
+    if isinstance(computed, (list, tuple)):
+        return any(computed_matches(c, target) for c in computed)
     if not isinstance(computed, (int, float)):
         return False
     candidates = [target["true_value"]]
@@ -85,10 +90,17 @@ def main():
             check(all(r.get("computed") is None for r in recs), f"{t['id']}: no computed value asserted")
             check(any(r.get("reason") for r in recs), f"{t['id']}: reason given")
         else:
-            check(any(computed_matches(r.get("computed"), t) for r in recs),
-                  f"{t['id']}: computed equals documented true value",
+            # the conditional fields must sit on the record that carries the
+            # correct computed value — a command or tolerance on some other
+            # paired record does not make that record recheckable
+            carriers = [r for r in recs if computed_matches(r.get("computed"), t)]
+            check(bool(carriers), f"{t['id']}: computed equals documented true value",
                   f"documented {t['true_value']!r}, report has {[r.get('computed') for r in recs]}")
-            check(any(r.get("producing_command") for r in recs), f"{t['id']}: producing command logged")
+            check(any(r.get("producing_command") for r in carriers),
+                  f"{t['id']}: producing command on the carrying record")
+            if t["kind"] == "point":
+                check(any(r.get("tolerance") for r in carriers),
+                      f"{t['id']}: tolerance stated on the carrying record")
 
     print()
     print("json report GRADED PASS" if ok else "json report GRADED FAIL")
