@@ -37,13 +37,13 @@ def norm_path(k):
 
 
 def names_input(key, want):
-    """True when a provenance key names the workspace-relative input: an
-    exact match, or an ABSOLUTE path ending in it. A relative
-    unrelated/data/workers.csv names a different input and must not
-    suffix-match."""
-    nk = norm_path(key).lower()
-    want = want.lower()
-    return nk == want or (nk.startswith("/") and nk.endswith("/" + want))
+    """True when a provenance key names the input by one spelling of the
+    SAME repository-relative path. Neither a relative lookalike
+    (unrelated/data/workers.csv) nor an absolute path is accepted:
+    /tmp/fabricated/data/workers.csv ends with the right suffix while
+    naming a file outside the evaluated workspace, and the schema keys
+    provenance by repository-relative path."""
+    return norm_path(key).lower() == want.lower()
 
 
 # an absence token inside a negation is a presence claim wearing the
@@ -434,6 +434,18 @@ def check_reported_integrity(g, t, recs):
     g.check(not negged,
             f"{t['id']}: reported does not negate the manuscript value",
             f"reported: {negged}" if negged else "")
+    # a unit marker contradicting the keyed unit changes the claim the
+    # record pairs on: "40%" is not the manuscript claim of 40 workers.
+    # Only the contradiction is rejected — most reported values
+    # legitimately carry no unit at all
+    unit = str(t.get("unit", "")).lower()
+    if unit and "percent" not in unit:
+        wrong = [r.get("reported") for r in recs
+                 if re.search(r"\d\s*(?:%|percent\b)",
+                              str(r.get("reported", "")).lower())]
+        g.check(not wrong,
+                f"{t['id']}: reported does not recast the value as a percentage",
+                f"reported: {wrong}" if wrong else "")
     if t.get("kind") == "predicate" and t.get("predicate") in ("less_than",
                                                                "greater_than"):
         op = "<" if t["predicate"] == "less_than" else ">"

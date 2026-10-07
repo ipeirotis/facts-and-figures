@@ -51,7 +51,9 @@ the absence where there is nothing to hash.
 
 Top level, all required: `schema` (exactly `facts-and-figures.verification/1`),
 `skill_version`, `manuscript_files`, `pipeline_command`, `environment`,
-`data_versions`, `values`.
+`data_versions`, `values`. Paths in `manuscript_files` and the keys of
+`data_versions` are repository-relative (`data/workers.csv`), the spelling
+the author's repository uses — never absolute container paths.
 
 Each record in `values` carries one manuscript value:
 

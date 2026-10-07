@@ -20,5 +20,5 @@ Pipeline command: `python3 analysis/run_analysis.py`, run once from the reposito
 
 ## Author decisions
 - The reported difference 6.23 disagrees with the pipeline's 6.32; decide whether to correct both occurrences.
-- The flagged share sits exactly on the rounding boundary; confirm the intended convention.
+- The flagged share (13%) sits exactly on the rounding boundary; confirm the intended convention.
 - The 64% retention could not be verified from the distributed data; confirm it against the restricted source or state that it is not reproducible.

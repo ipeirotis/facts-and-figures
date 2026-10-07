@@ -140,8 +140,11 @@ MUTATIONS = [
     ("flagged-share reported without the value", [], "mock_good.json",
      lambda d: [r.update(reported="flagged") for r in d["values"]
                 if "13" in str(r.get("reported", ""))], 1),
+    # absolute paths were once accepted by suffix; the schema now keys
+    # everything repository-relative, so even a workspace-shaped
+    # absolute path is a spelling the author's repository does not use
     ("absolute manuscript_files path", [], "mock_good.json",
-     lambda d: d.update(manuscript_files=["/tmp/fnf-eval.x/verify/manuscript.md"]), 0),
+     lambda d: d.update(manuscript_files=["/tmp/fnf-eval.x/verify/manuscript.md"]), 1),
     ("exempt unverifiable without explicit null computed", [], "mock_good.json",
      lambda d: d["values"].append({"location": "manuscript.md, Data",
                                    "reported": "0-100 scale",
@@ -463,6 +466,18 @@ MUTATIONS = [
      lambda d: [r.update(location=str(r["location"]).replace(
          "manuscript.md", "/tmp/fabricated/manuscript.md"))
                 for r in d["values"]], 1),
+    # absolute provenance paths name files outside the evaluated
+    # workspace — the schema keys everything repository-relative
+    ("manuscript_files relocated under /tmp", [], "mock_good.json",
+     lambda d: d.update(manuscript_files=["/tmp/fabricated/manuscript.md"]), 1),
+    ("data_versions keyed by an absolute path", [], "mock_good.json",
+     lambda d: d["data_versions"].update(
+         {"/tmp/fabricated/data/workers.csv":
+          d["data_versions"].pop("data/workers.csv")}), 1),
+    # a unit marker contradicting the keyed unit changes the claim
+    ("sample size recast as a percentage", [], "mock_good.json",
+     lambda d: [r.update(reported="40%") for r in d["values"]
+                if r.get("reported") == "40"], 1),
     # a command that merely prints the script name runs nothing
     ("pipeline_command wrapped in echo", [], "mock_good.json",
      lambda d: d.update(pipeline_command="echo analysis/run_analysis.py"), 1),
@@ -511,7 +526,7 @@ def _absence_decoupled(text):
 # must produce: (label, mock file, extra args, text transform, want)
 MD_MUTATIONS = [
     ("misdirected boundary", "mock_good.md", [], _replacing(
-     "The flagged share sits exactly on the rounding boundary; confirm the intended convention.",
+     "The flagged share (13%) sits exactly on the rounding boundary; confirm the intended convention.",
      "There are no boundary concerns for the overall mean 71.48."), 1),
     ("mismatch dropped from Author decisions", "mock_good.md", [], _replacing(
      "The reported difference 6.23 disagrees with the pipeline's 6.32; decide whether to correct both occurrences.",
@@ -560,8 +575,12 @@ MD_MUTATIONS = [
     # prose DENYING the tie must not satisfy the boundary disclosure on
     # the strength of the words it negates
     ("negated boundary disclosure", "mock_good.md", [], _replacing(
-     "The flagged share sits exactly on the rounding boundary; confirm the intended convention.",
+     "The flagged share (13%) sits exactly on the rounding boundary; confirm the intended convention.",
      "The flagged share is not a rounding boundary or tie; no decision is needed."), 1),
+    # a prose anchor like "flagged" survives any drift of the value
+    # itself — coverage must ride the value-bearing anchors
+    ("flagged share drifted to 99 percent", "mock_good.md", [],
+     _replacing("manuscript reports 13%", "manuscript reports 99%"), 1),
     # a heading reading "Results omitted" credits no section
     ("section headings suffixed with omitted", "mock_gate.md", ["--gate"],
      lambda t: t.replace("## Scope and gate", "## Scope and gate omitted")

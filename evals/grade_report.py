@@ -141,17 +141,23 @@ def grade_targets(report, expected):
     results_text = section_span(report, "results")
     span = lines if results_text is None else results_text.splitlines()
     for t in expected["targets"]:
-        if anchor_lines(span, t["anchors"]):
+        # value-bearing anchors when the target has them, as the JSON
+        # pairing path prefers: a prose anchor like "flagged" survives
+        # any drift of the value itself, so a report stating 99% would
+        # still read as covering the 13% claim
+        anchors = ([a for a in t["anchors"] if any(c.isdigit() for c in a)]
+                   or t["anchors"])
+        if anchor_lines(span, anchors):
             print(f"PASS  {t['id']}: covered in the Results section")
         else:
-            print(f"FAIL  {t['id']}: no Results line mentions any anchor {t['anchors']}")
+            print(f"FAIL  {t['id']}: no Results line mentions any anchor {anchors}")
             ok = False
         if t["expected"] in ("mismatch", "unverifiable"):
             # a planted mismatch and an unverifiable value are the
             # author's calls to make — correct or disclose — so each must
             # surface in Author decisions, not only in Results; the live
             # runs all did this unprompted
-            if anchor_lines(dlines, t["anchors"]):
+            if anchor_lines(dlines, anchors):
                 print(f"PASS  {t['id']}: raised in Author decisions")
             else:
                 print(f"FAIL  {t['id']}: {t['expected']} value absent from Author decisions")
@@ -165,7 +171,7 @@ def grade_targets(report, expected):
             anchored = any(
                 BOUNDARY_RE.search(
                     NEG_BOUNDARY_RE.sub(" ", "\n".join(dlines[max(0, i - 1):i + 2])))
-                for i in anchor_lines(dlines, t["anchors"]))
+                for i in anchor_lines(dlines, anchors))
             if anchored:
                 print(f"PASS  {t['id']}: boundary case raised with this value in Author decisions")
             else:

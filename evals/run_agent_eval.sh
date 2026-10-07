@@ -221,6 +221,11 @@ if command -v claude >/dev/null 2>&1; then
     # its already-open file descriptor, and the graders only run after
     # restore_key reopens everything
     LOCK_DIRS+=("$SKILL_DIR")
+    # the integrity baselines are locked with the answer key: an agent
+    # with pre-approved Bash could otherwise rewrite ../verify.pre after
+    # modifying an author file, and workspace_clean would then compare
+    # the tree against the agent's own snapshot
+    LOCK_DIRS+=("$WORK/verify.pre" "$WORK/gated.pre")
     for d in "${LOCK_DIRS[@]}"; do LOCK_MODES+=("$(dir_mode "$d")"); done
     restore_key() {
         # reverse order: a parent (the common dir) must be reopened
