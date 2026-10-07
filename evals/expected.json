@@ -3,6 +3,7 @@
   "manuscript_files": ["manuscript.md"],
   "pipeline_command": "python3 analysis/run_analysis.py",
   "producing_command_must_contain": "python",
+  "producing_command_must_name_any": ["run_analysis.py", "workers.csv", "results.json"],
   "pipeline_seed": "20260816",
   "out_of_scope_anchors": ["0-100", "0–100", "three month", "three-month", "3 month"],
   "results_file": "results/results.json",

@@ -147,14 +147,19 @@ jobs:
           # explicit so a failing claude exit still fails the step when
           # this block is copied into a workflow that drops shell: bash
           set -o pipefail
-          # a committed or leftover companion from an earlier run must
-          # not satisfy the gate below if this run fails to write its
-          # own. Deleted only through a REAL directory: an output root
-          # that is a symlink would route the removal into the author
-          # directory it points at
-          if [ -d facts-and-figures-out ] && [ ! -L facts-and-figures-out ]; then
-            rm -f facts-and-figures-out/verification-report.json
+          # the proposal root must be a real directory or absent: a
+          # symlinked or non-directory root would route this cleanup —
+          # and the gate's later read — into whatever it points at, so a
+          # stale all-match companion behind a symlink could pass the
+          # gate without this run writing anything. Fail the run instead
+          # of skipping
+          if [ -L facts-and-figures-out ] || { [ -e facts-and-figures-out ] && [ ! -d facts-and-figures-out ]; }; then
+            echo "facts-and-figures-out exists and is not a real directory" >&2
+            exit 1
           fi
+          # a committed or leftover companion from an earlier run must
+          # not satisfy the gate below if this run fails to write its own
+          rm -f facts-and-figures-out/verification-report.json
           # the prose capture goes to RUNNER_TEMP, not the checkout root:
           # a shell redirect bypasses the write-boundary hook, and a paper
           # repository may own a file by this name

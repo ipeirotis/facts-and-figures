@@ -302,6 +302,30 @@ MUTATIONS = [
      lambda d: [r.update(reason="the required input is missing and the "
                                 "pipeline did not run")
                 for r in d["values"]], 0),
+    # naming the source is not explaining the blockage: the bare stem
+    # says nothing about why the value is unverifiable
+    ("missing-source reason reduced to the bare stem", [], "mock_good.json",
+     lambda d: [r.update(reason="wave2_followup")
+                for r in d["values"]
+                if r.get("classification") == "unverifiable"], 1),
+    # ...while failure vocabulary explains the blockage as well as the
+    # absence idioms do
+    ("missing-source reason stating a load failure", [], "mock_good.json",
+     lambda d: [r.update(reason="pipeline failed to load data/wave2_followup.csv")
+                for r in d["values"]
+                if r.get("classification") == "unverifiable"], 0),
+    # a producing command wearing the runtime token while touching no
+    # known pipeline artifact is fabricated provenance
+    ("producing commands reduced to echo python", [], "mock_good.json",
+     lambda d: [r.update(producing_command="echo python") for r in d["values"]
+                if r.get("producing_command")], 1),
+    # ...while a supplementary command computing straight from the
+    # dataset is legitimate provenance, as a live run produced
+    ("supplementary command naming the dataset", [], "mock_good.json",
+     lambda d: [r.update(producing_command="python3 -I -c \"csv count of rows "
+                                           "in data/workers.csv\"")
+                for r in d["values"]
+                if r.get("reported") == "20 / 20"], 0),
 ]
 
 

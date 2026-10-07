@@ -73,6 +73,15 @@ ABSENCE_WORD_RE = re.compile(
     r"missing|not found|unavailable|unreachable|absent|removed"
     r"|not distributed|did not run|never ran|could not|no such")
 
+# vocabulary that states WHY a value is unverifiable: the absence idioms
+# plus failure words. A reason carrying none of these after its negated
+# absence forms are stripped — the bare source stem "wave2_followup" —
+# names a file without explaining any blockage, contrary to the schema's
+# reason contract; the gate grader has required this all along
+EXPLAINS_RE = re.compile(
+    ABSENCE_WORD_RE.pattern
+    + r"|\bfail(?:s|ed|ure)?\b|\bcannot\b|\bcan.?t\b|\bunable\b|\berror(?:s|ed)?\b")
+
 
 def names_file(name, text):
     """Bounded filename match: the basename of NAME appears in TEXT as
@@ -421,19 +430,36 @@ def grade_targets(report, expected):
                     if must_rx else True,
                     f"{t['id']}: reason names the missing source",
                     f"reasons: {[r.get('reason') for r in recs]}" if must else "")
+            # naming the source is not explaining the blockage: a reason
+            # reduced to the bare stem "wave2_followup" says nothing
+            # about WHY the value is unverifiable. The same absence and
+            # failure vocabulary the gate grader requires applies here,
+            # negated forms stripped first
+            unexplained = [str(r.get("reason"))[:60] for r in recs
+                           if not EXPLAINS_RE.search(
+                               NEG_ABSENCE_RE.sub(" ", str(r.get("reason", "")).lower()))]
+            g.check(not unexplained, f"{t['id']}: reason states an absence or failure",
+                    f"reasons: {unexplained}" if unexplained else "")
         else:
             # every covering record must be coherent on its own — a correct
             # sibling must not excuse an unverified or unexplained record
             g.check(all(computed_matches(r.get("computed"), t) for r in recs),
                     f"{t['id']}: correct computed value on every record",
                     f"documented {t['true_value']!r}, report has {[r.get('computed') for r in recs]}")
-            # the command cannot be verified verbatim (supplementary logged
-            # commands are legitimate), but it must at least invoke the
-            # fixture's runtime: a fabricated "echo 0" is not provenance
+            # the command cannot be verified verbatim (supplementary
+            # commands are legitimate: a live run counted the group split
+            # straight from the CSV), but it must invoke the fixture's
+            # runtime AND name a known pipeline artifact, bounded — a
+            # fabricated "echo python" wears the runtime token while
+            # touching nothing the value could have come from
             token = expected.get("producing_command_must_contain", "")
-            g.check(all(token in str(r.get("producing_command", "")).lower() for r in recs),
-                    f"{t['id']}: plausible producing command on every record",
-                    f"commands: {[r.get('producing_command') for r in recs]}" if token else "")
+            artifacts = expected.get("producing_command_must_name_any", [])
+            cmds = [str(r.get("producing_command", "")).lower() for r in recs]
+            ok_cmd = all((not token or token in c)
+                         and (not artifacts or any(names_file(a, c) for a in artifacts))
+                         for c in cmds)
+            g.check(ok_cmd, f"{t['id']}: plausible producing command on every record",
+                    "" if ok_cmd else f"commands: {[r.get('producing_command') for r in recs]}")
             g.check(all(r.get("tolerance") for r in recs),
                     f"{t['id']}: tolerance/predicate stated on every record")
 
