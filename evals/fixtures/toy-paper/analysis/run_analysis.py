@@ -55,13 +55,23 @@ def main():
     # Two-sided permutation test on the difference in group means. The pool
     # is shuffled cumulatively; with the fixed seed the sequence of
     # permutations, and therefore the p-value, is identical on every run.
+    # The shuffle is implemented directly on rng.random() — the one
+    # primitive whose sequence Python guarantees stable across versions —
+    # because random.shuffle()'s algorithm is allowed to change between
+    # releases, which would silently move the keyed p-value.
     obs = results["diff_experienced_minus_inexperienced"]
     pool = list(scores)
     k = len(exp)
     rng = random.Random(PERM_SEED)
+
+    def stable_shuffle(seq):
+        for i in range(len(seq) - 1, 0, -1):
+            j = int(rng.random() * (i + 1))
+            seq[i], seq[j] = seq[j], seq[i]
+
     n_ge = 0
     for _ in range(N_PERM):
-        rng.shuffle(pool)
+        stable_shuffle(pool)
         d = sum(pool[:k]) / k - sum(pool[k:]) / (len(pool) - k)
         if abs(d) >= abs(obs):
             n_ge += 1
