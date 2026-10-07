@@ -82,12 +82,22 @@ def names_file(name, text):
     return bool(re.search(r"(?<![\w.-])" + base + r"(?!\w)", text))
 
 
-def reason_denies(reason):
+def reason_denies(reason, sources=()):
     """True when a reason contradicts the unverifiable classification it
-    sits on: it denies the absence, credits the run with success, or
-    claims presence without asserting any absence."""
+    sits on: it denies the absence, credits the run with success, claims
+    presence without asserting any absence — or claims presence OF a
+    named blocking source in the same clause, which an unrelated missing
+    file elsewhere in the reason must not mask. The clause bound keeps
+    historical context legitimate ("is missing from this checkout; it
+    was present in the archived v1 snapshot")."""
     if NEG_ABSENCE_RE.search(reason) or GATE_SUCCESS_RE.search(reason):
         return True
+    for s in sources:
+        if s and re.search(
+                re.escape(s.lower())
+                + r"[^.;]{0,60}?\b(?:is|are|was|were|remains?)\s+"
+                r"(?:present|available|verified|intact)\b", reason):
+            return True
     return bool(PRESENCE_RE.search(reason)
                 and not ABSENCE_WORD_RE.search(NEG_ABSENCE_RE.sub(" ", reason)))
 TOP_REQUIRED = ("schema", "skill_version", "manuscript_files", "pipeline_command",
@@ -357,11 +367,14 @@ def grade_targets(report, expected):
             + [str(r.get("producing_command", "")) for r in values])
         # a negated mention is not provenance: "seed was not 20260816;
         # actual seed 7" names the digits while denying them, so the
-        # negated phrase is stripped before the scan
+        # negated phrase is stripped before the scan — and the digits
+        # are matched bounded, so a larger number ("build 1202608167")
+        # that happens to contain them records no seed
         neg_seed = re.compile(
             r"\b(?:not|never|wasn.?t|isn.?t)\s+(?:\w+\s+){0,2}?" + re.escape(seed),
             re.I)
-        g.check(seed in neg_seed.sub(" ", prov),
+        seed_rx = re.compile(r"(?<![\d.])" + re.escape(seed) + r"(?!\d)")
+        g.check(bool(seed_rx.search(neg_seed.sub(" ", prov))),
                 "the pipeline seed appears in the provenance fields")
 
     paired = set()
@@ -394,7 +407,9 @@ def grade_targets(report, expected):
             # contradicts the unverifiable classification it sits on,
             # whichever file it also names
             denying = [str(r.get("reason"))[:60] for r in recs
-                       if reason_denies(str(r.get("reason", "")).lower())]
+                       if reason_denies(
+                           str(r.get("reason", "")).lower(),
+                           sources=(str(t.get("reason_must_contain", "")).lower(),))]
             g.check(not denying, f"{t['id']}: no reason denies the absence",
                     f"reasons: {denying}" if denying else "")
             must = t.get("reason_must_contain", "").lower()
@@ -511,8 +526,10 @@ def grade_gate(report, expected):
     # fails outright, whatever else it names: "workers.csv is not
     # missing" and "gate passed for workers.csv" would otherwise pass on
     # the basename alone
+    removed_bases = [n.split("/")[-1] for n in removed]
     bad_reasons = [str(r.get("reason"))[:60] for r in values
-                   if reason_denies(str(r.get("reason", "")).lower())
+                   if reason_denies(str(r.get("reason", "")).lower(),
+                                    sources=removed_bases)
                    or (not any(w in str(r.get("reason", "")).lower() for w in gate_words)
                        and not any(names_file(n, str(r.get("reason", "")).lower())
                                    for n in removed))]

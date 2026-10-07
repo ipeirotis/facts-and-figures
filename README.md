@@ -148,8 +148,13 @@ jobs:
           # this block is copied into a workflow that drops shell: bash
           set -o pipefail
           # a committed or leftover companion from an earlier run must
-          # not satisfy the gate below if this run fails to write its own
-          rm -f facts-and-figures-out/verification-report.json
+          # not satisfy the gate below if this run fails to write its
+          # own. Deleted only through a REAL directory: an output root
+          # that is a symlink would route the removal into the author
+          # directory it points at
+          if [ -d facts-and-figures-out ] && [ ! -L facts-and-figures-out ]; then
+            rm -f facts-and-figures-out/verification-report.json
+          fi
           # the prose capture goes to RUNNER_TEMP, not the checkout root:
           # a shell redirect bypasses the write-boundary hook, and a paper
           # repository may own a file by this name

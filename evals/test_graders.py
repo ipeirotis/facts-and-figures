@@ -272,6 +272,17 @@ MUTATIONS = [
      lambda d: [r.update(reason="python3 analysis/run_analysis.py exited 1; "
                                 "the pipeline did not run")
                 for r in d["values"]], 0),
+    # a presence claim about the blocking input is a contradiction even
+    # when an unrelated file is said to be missing beside it
+    ("gate reasons claiming the removed input present, blaming another file",
+     ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="data/workers.csv is present and verified; "
+                                "README.md is missing")
+                for r in d["values"]], 1),
+    # seed digits inside a larger number record no seed
+    ("seed digits embedded in a build number", [], "mock_good.json",
+     lambda d: d.update(environment="Python 3.11.15, stdlib only; "
+                                    "build 1202608167"), 1),
     # the manuscript's actual Data wording is verbatim-compliant and
     # must pair with the group-split target
     ("group-split reported with the manuscript wording", [], "mock_good.json",
@@ -373,6 +384,12 @@ MD_MUTATIONS = [
     ("negated boundary disclosure", "mock_good.md", [], _replacing(
      "The flagged share sits exactly on the rounding boundary; confirm the intended convention.",
      "The flagged share is not a rounding boundary or tie; no decision is needed."), 1),
+    # a heading reading "Results omitted" credits no section
+    ("section headings suffixed with omitted", "mock_gate.md", ["--gate"],
+     lambda t: t.replace("## Scope and gate", "## Scope and gate omitted")
+                .replace("## Method and provenance", "## Method and provenance omitted")
+                .replace("## Results", "## Results omitted")
+                .replace("## Author decisions", "## Author decisions omitted"), 1),
 ]
 
 

@@ -54,15 +54,21 @@ NEG_VERDICT_RE = re.compile(
 SECTIONS = ("scope and gate", "method and provenance", "results", "author decisions")
 
 
+def heading_rx(name):
+    """A contract heading is the section name and nothing else — a heading
+    reading "Results omitted" credits no section. Markdown closers and a
+    trailing colon are the only extras allowed."""
+    return re.compile(r"(?mi)^\s*(?:#{1,6}|\*\*|\d+\.)\s*(?:\d+\.\s*)?(?:\*\*)?\s*"
+                      + re.escape(name) + r"\s*(?:\*\*)?\s*:?\s*$")
+
+
 def grade_sections(report):
     """The skill's return contract names four sections, which must appear as
     actual headings (markdown #, bold, or numbered), not merely be mentioned
     in a sentence — a report saying the sections were omitted must fail."""
     ok = True
     for s in SECTIONS:
-        rx = re.compile(r"(?mi)^\s*(?:#{1,6}|\*\*|\d+\.)\s*(?:\d+\.\s*)?(?:\*\*)?\s*"
-                        + re.escape(s) + r"\b")
-        if rx.search(report):
+        if heading_rx(s).search(report):
             print(f"PASS  section present: {s}")
         else:
             print(f"FAIL  section heading missing: {s}")
@@ -82,9 +88,6 @@ def section_span(report, name):
     Returns None when the heading is missing (grade_sections reports that
     on its own) — distinct from an empty string for a present-but-empty
     section, which must NOT fall back to searching the whole report."""
-    def heading_rx(s):
-        return re.compile(r"(?mi)^\s*(?:#{1,6}|\*\*|\d+\.)\s*(?:\d+\.\s*)?(?:\*\*)?\s*"
-                          + re.escape(s) + r"\b")
     m = heading_rx(name).search(report)
     if not m:
         return None
