@@ -152,8 +152,12 @@ copy inside the proposal directory, made without touching the author's
 repository (`git archive` of the logged commit unpacked there, or a `git
 clone` into it; never `git worktree add`, which writes metadata into the
 author's `.git`), carrying over any uncommitted inputs the run reads,
-recorded by path and content hash, and removed at teardown. Log which one
-ran. When none
+recorded by path and content hash, and removed at teardown. A copy
+isolates only relative writes: before running it, confirm that every
+write the pipeline makes resolves inside the copy or the proposal
+directory, with no absolute output path, environment-configured cache
+path, or copied symlink leading back into the author's checkout. Log which
+one ran. When none
 is possible, the values that run would produce are unverifiable: say why
 in `Author decisions` and do not run it.
 
@@ -189,7 +193,11 @@ Compare, value by value, and classify each as one of:
 
       |m| - u/2  <=  |v|  <  |m| + u/2,   with v of the same sign as m
 
-  (for `m = 0`, simply `|v| < u/2`), which is exactly the set of values that
+  (for `m = 0`, simply `|v| < u/2`; for scientific notation whose mantissa
+  is exactly 1 at the bottom of its decade, the lower endpoint is
+  `|m| - u/20`, half a unit of the decade below, since `1.0 × 10^3` is
+  displayed by `[995, 1050)` and `960` displays as `9.6 × 10^2`), which is
+  exactly the set of values that
   display as `m` under round-half-up, where a half rounds away from zero
   (Python's `decimal.ROUND_HALF_UP`). Working on magnitudes keeps negative
   values right: against a reported `-1.25`, `-1.255` displays as `-1.26` and
