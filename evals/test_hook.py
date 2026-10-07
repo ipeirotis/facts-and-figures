@@ -82,6 +82,14 @@ def main():
         check("marker: mid-run marker rewrite denied",
               write_payload(proj, proj / "facts-and-figures-out" / ".active"), proj,
               want_deny=True)
+        # nor through a symlink alias in the proposal directory, which
+        # skips the lexical marker check but resolves to the marker itself
+        (proj / "facts-and-figures-out" / "alias").symlink_to(
+            proj / "facts-and-figures-out" / ".active")
+        check("marker: rewrite through a proposal-dir alias denied",
+              write_payload(proj, proj / "facts-and-figures-out" / "alias"), proj,
+              want_deny=True)
+        (proj / "facts-and-figures-out" / "alias").unlink()
         # no scratch allowance: the protocol authors new files only in the
         # proposal directory, and an author input living under /tmp would
         # otherwise be writable through guarded tools

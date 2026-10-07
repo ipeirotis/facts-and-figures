@@ -123,6 +123,17 @@ if [ "${1:-}" = "--grade-only" ]; then
 fi
 
 WORK="${1:-$(mktemp -d /tmp/fnf-eval.XXXXXX)}"
+# refuse a populated directory this harness did not create: prepare()
+# recursively removes verify/ and gated/ inside it, so pointing the
+# harness at "." or "/" must not erase unrelated directories
+if [ -e "$WORK" ] && [ -n "$(ls -A "$WORK" 2>/dev/null)" ] \
+        && [ ! -e "$WORK/.fnf-eval-workspace" ]; then
+    echo "refusing to use $WORK: it is not empty and was not created by this harness" >&2
+    echo "pass a new or empty directory (or omit the argument for a temp one)" >&2
+    exit 1
+fi
+mkdir -p "$WORK"
+touch "$WORK/.fnf-eval-workspace"
 prepare verify
 prepare gated
 rm "$WORK/gated/data/workers.csv"

@@ -135,14 +135,16 @@ def safe_root(cand):
 # at, with safe_root none the wiser
 proposal_safe = safe_root(proposal) and proposal == proposal_lexical
 
-if lexical == marker:
+if lexical == marker or resolved == marker:
     # the marker is read-only while a run is armed: it is created before
     # the first command, carrying any custom proposal directory as its
     # single line (the unarmed branch above validates that write), and it
     # is removed with the run at teardown. A guarded tool rewriting it
     # mid-run would re-aim the write boundary itself — name data as the
     # proposal directory, then edit the dataset through the very tools
-    # this hook guards
+    # this hook guards. Judged on the resolved path too: an alias symlink
+    # planted in the proposal directory must not reach the marker past
+    # the lexical check
     deny(
         "facts-and-figures write boundary: the run marker {m} is read-only while "
         "a run is active. It is created before the first command and removed at "
