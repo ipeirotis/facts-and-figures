@@ -13,11 +13,14 @@ every classification the protocol defines:
 
 | Target | Manuscript says | Pipeline gives | Expected |
 |---|---|---|---|
+| sample size | 40 workers | 40 | match |
+| group split | 20 / 20 | 20 and 20 | match |
 | overall mean | 71.48 | 71.4825 | match |
 | experienced mean | 74.64 | 74.6425 | match |
 | inexperienced mean | 68.32 | 68.3225 | match |
 | difference of means | 6.23 | 6.32 | mismatch (planted transposition) |
 | flagged share | 13% | exactly 12.5% | match **and** a named boundary case — the exact lower-endpoint tie, where half-up prints 13 and half-even prints 12 |
+| permutation count | 10,000 | 10000 | match |
 | wave-2 retention | 64% | source file not distributed | unverifiable |
 | permutation test | p < 0.001 | 9.999e-05 | match, checked as a predicate |
 | gate case | — | dataset removed | name the unreachable input; classify nothing as match or mismatch — a blanket unverifiable naming the missing input is the correct outcome |
@@ -69,7 +72,10 @@ classifications, boundary flags, computed values, and the conditional
 fields (tolerance, producing command, reason) on the record that carries
 each value. A missing JSON companion is itself a failure, since the
 workspace is writable and `references/verification-report.md` mandates it
-there.
+there. On a failed gate the companion is optional (the prose naming the
+missing input is the deliverable), but when written it is graded under
+`--gate`: every record unverifiable with a reason, nothing computed, the
+missing input named.
 
 ## CI
 

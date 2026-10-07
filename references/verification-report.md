@@ -13,6 +13,13 @@ It stays in the proposal directory like all generated work. It is not
 teardown: the run marker is removed when the run ends, the report is kept.
 A read-only session writes no report and says so in Method and provenance.
 
+A run that stops at the gate computes nothing, so the companion is
+optional there: the prose report naming the unreachable input is the
+deliverable of a gate failure. A run that writes one anyway must classify
+every in-scope value `unverifiable`, give each record its `reason`, assert
+no `computed` values, and name the missing input; `data_versions` records
+the absence where there is nothing to hash.
+
 ## Shape
 
 ```json

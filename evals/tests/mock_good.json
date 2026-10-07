@@ -22,6 +22,19 @@
     },
     {
       "location": "manuscript.md, Data",
+      "reported": "20 / 20",
+      "classification": "match",
+      "computed": [
+        20,
+        20
+      ],
+      "tolerance": "exact integer, k=0",
+      "boundary": false,
+      "producing_command": "python3 analysis/run_analysis.py",
+      "note": "n_experienced / n_inexperienced"
+    },
+    {
+      "location": "manuscript.md, Data",
       "reported": "71.48",
       "classification": "match",
       "computed": 71.4825,

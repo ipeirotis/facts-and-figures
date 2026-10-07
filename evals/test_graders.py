@@ -22,6 +22,7 @@ CASES = [
     ("grade_report.py", ["--gate"], "mock_gate.md", 0),
     ("grade_json_report.py", [], "mock_good.json", 0),
     ("grade_json_report.py", [], "mock_bad.json", 1),
+    ("grade_json_report.py", ["--gate"], "mock_gate.json", 0),
 ]
 
 

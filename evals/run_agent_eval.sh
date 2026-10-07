@@ -87,6 +87,16 @@ if command -v claude >/dev/null 2>&1; then
     (cd "$WORK/gated" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/gated-report.md"
     python3 "$EVALS_DIR/grade_report.py" --gate "$WORK/gated-report.md" "$EVALS_DIR/expected.json" || rc=1
 
+    # on a failed gate the JSON companion is optional (the prose naming the
+    # missing input is the deliverable), but when written it is held to the
+    # gate contract: all unverifiable, reasons given, nothing computed
+    GATE_JSON="$WORK/gated/facts-and-figures-out/verification-report.json"
+    if [ -f "$GATE_JSON" ]; then
+        python3 "$EVALS_DIR/grade_json_report.py" --gate "$GATE_JSON" "$EVALS_DIR/expected.json" || rc=1
+    else
+        echo "note: gate run wrote no JSON companion (permitted on a failed gate)"
+    fi
+
     exit "$rc"
 else
     cat <<EOF

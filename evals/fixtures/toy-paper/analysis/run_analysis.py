@@ -36,6 +36,8 @@ def main():
 
     results = {
         "n_workers": len(rows),
+        "n_experienced": len(exp),
+        "n_inexperienced": len(inexp),
         "overall_mean_quality": sum(scores) / len(scores),
         "mean_quality_experienced": sum(exp) / len(exp),
         "mean_quality_inexperienced": sum(inexp) / len(inexp),

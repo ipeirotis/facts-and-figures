@@ -17,6 +17,20 @@
       "anchors": ["40 workers", "40 microtask workers", "n_workers", "40"]
     },
     {
+      "id": "group-split",
+      "location": "manuscript.md, Data",
+      "manuscript_value": 20,
+      "decimals": 0,
+      "unit": "workers per group",
+      "result_key": "n_experienced",
+      "true_value": 20,
+      "kind": "point",
+      "expected": "match",
+      "boundary": false,
+      "anchors": ["20 / 20", "20/20", "20 experienced", "n_experienced"],
+      "note": "the 20-and-20 group split; a record may bundle both group counts as a list"
+    },
+    {
       "id": "overall-mean",
       "location": "manuscript.md, Data",
       "manuscript_value": 71.48,
@@ -123,7 +137,7 @@
       "predicate_value": 0.001,
       "expected": "match",
       "boundary": false,
-      "anchors": ["0.001", "permutation", "p-value", "p value"],
+      "anchors": ["0.001", "p-value", "p value"],
       "note": "a bound is checked as a predicate fixed before comparison, not by equality"
     }
   ],

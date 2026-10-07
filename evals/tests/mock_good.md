@@ -8,6 +8,7 @@ Pipeline command: `python3 analysis/run_analysis.py`, run once from the reposito
 
 ## Results
 - Sample size: manuscript reports 40 workers, pipeline n_workers gives 40 -> match.
+- Group split: manuscript reports 20 / 20, pipeline n_experienced and n_inexperienced give 20 and 20 -> match.
 - Overall mean quality: manuscript reports 71.48, pipeline gives 71.4825 -> match (tolerance 0.005).
 - Experienced mean: manuscript 74.64, pipeline 74.6425 -> match.
 - Inexperienced mean: manuscript 68.32, pipeline 68.3225 -> match.
