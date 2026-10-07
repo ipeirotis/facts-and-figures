@@ -1,0 +1,80 @@
+name: agent-eval
+
+# End-to-end eval: headless Claude Code verifies the fixture paper repo and
+# the reports are graded against the answer key. Requires the
+# ANTHROPIC_API_KEY secret in the agent-eval deployment environment (a
+# plain repository secret also resolves); without it the job skips with a
+# notice instead of failing every push.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - SKILL.md
+      - references/**
+      - hooks/**
+      - agents/**
+      - evals/**
+      # the workflow itself: a push changing only the orchestration must
+      # still exercise the run it orchestrates
+      - .github/workflows/agent-eval.yml
+
+permissions:
+  contents: read
+
+jobs:
+  agent-eval:
+    name: headless eval against the fixture
+    runs-on: ubuntu-latest
+    # workflow_dispatch lets anyone with write access run the checked-out
+    # eval script — from any branch — with the API key in its reach. The
+    # ref guard below makes the trusted ref a property of the workflow
+    # itself: a dispatch from any other branch skips before the job
+    # receives the environment or its secret, whatever the environment's
+    # own deployment-branch rules say. The deployment environment remains
+    # the right place for the key (and for required reviewers, if any)
+    if: github.ref == 'refs/heads/main'
+    environment: agent-eval
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # the eval pre-approves Bash for the measured agent, which must
+          # not inherit a usable checkout token from .git/config
+          persist-credentials: false
+      - name: check for API key
+        id: key
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::ANTHROPIC_API_KEY secret not set; skipping the agent eval"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          node-version: 22
+      - name: install Claude Code
+        if: steps.key.outputs.present == 'true'
+        run: npm install -g @anthropic-ai/claude-code
+      - name: run the agent eval
+        if: steps.key.outputs.present == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # keep the key out of the Bash commands the eval pre-approves;
+          # Claude Code retains it for its own API calls
+          CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+        run: evals/run_agent_eval.sh "$RUNNER_TEMP/fnf-eval"
+      - name: upload reports
+        if: always() && steps.key.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-reports
+          path: |
+            ${{ runner.temp }}/fnf-eval/*-report.md
+            ${{ runner.temp }}/fnf-eval/verify/facts-and-figures-out/verification-report.json
+            ${{ runner.temp }}/fnf-eval/gated/facts-and-figures-out/verification-report.json
+          if-no-files-found: warn

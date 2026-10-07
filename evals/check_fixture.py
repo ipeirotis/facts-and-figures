@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+"""Deterministic self-check for the toy-paper fixture. No LLM involved.
+
+Guards the fixture against drift: runs the pipeline in a scratch copy and
+asserts (a) every documented true value is what the pipeline actually
+produces, (b) each expected classification follows from the protocol's own
+tolerance rule applied to those values, and (c) the gate case fails loudly
+when the dataset is removed.
+
+The tolerance rule checked here is the one references/analysis-integrity.md
+states (as of v0.2.1, on magnitudes): for a manuscript value m reported to
+k decimals, with u = 10^-k, the accepted set is |m| - u/2 <= |v| < |m| + u/2
+with v of the same sign as m (for m = 0, simply |v| < u/2); a value landing
+exactly on the lower magnitude endpoint is a match that must additionally
+be disclosed as a boundary case; the upper magnitude endpoint is excluded.
+EPS exists only to absorb floating-point summation noise (~1e-13): the
+fixture's design doctrine is that every planted value is constructed
+exactly (integer cents, binary-exact fractions), never within EPS of an
+endpoint it does not sit on, so EPS never decides a classification.
+
+Usage: python3 evals/check_fixture.py
+Exit code 0 iff every check passes.
+"""
+
+import json
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+EVALS = Path(__file__).resolve().parent
+EPS = 1e-9
+
+failures = []
+
+
+def check(ok, label, detail=""):
+    print(f"{'PASS' if ok else 'FAIL'}  {label}" + (f"  ({detail})" if detail else ""))
+    if not ok:
+        failures.append(label)
+
+
+def classify(v, m, decimals):
+    """Apply the protocol's half-open tolerance rule on magnitudes.
+    Returns (cls, boundary)."""
+    u = 10 ** -decimals
+    if v != 0 and m != 0 and (v > 0) != (m > 0):
+        return "mismatch", False
+    av, am = abs(v), abs(m)
+    lo, hi = am - u / 2, am + u / 2
+    if m != 0 and abs(av - lo) < EPS:
+        return "match", True
+    if lo < av < hi - EPS:
+        return "match", False
+    # the upper endpoint of the half-open interval is outside it — a
+    # mismatch — but an exact endpoint is still a tie the protocol
+    # requires flagged and disclosed, on either side
+    if m != 0 and abs(av - hi) < EPS:
+        return "mismatch", True
+    return "mismatch", False
+
+
+def run_pipeline(fixture_dir):
+    return subprocess.run(
+        [sys.executable, "analysis/run_analysis.py"],
+        cwd=fixture_dir, capture_output=True, text=True,
+    )
+
+
+def main():
+    expected = json.loads((EVALS / "expected.json").read_text())
+    src = EVALS / expected["fixture"]
+
+    with tempfile.TemporaryDirectory() as tmp:
+        fixture = Path(tmp) / "paper"
+        shutil.copytree(src, fixture)
+        shutil.rmtree(fixture / "results", ignore_errors=True)
+
+        proc = run_pipeline(fixture)
+        check(proc.returncode == 0, "pipeline runs", proc.stderr.strip()[:120])
+        if proc.returncode != 0:
+            sys.exit(1)
+        results = json.loads((fixture / expected["results_file"]).read_text())
+
+        # the answer key must still describe the manuscript: a target whose
+        # value or anchors appear nowhere in the text is stale, and grading
+        # against it would bless claims the manuscript no longer makes. The
+        # probes carry the JSON grader's digit guards, so a drifted 140
+        # does not satisfy a probe for 40 as a substring
+        from grade_json_report import anchor_rx
+        manuscript = (fixture / "manuscript.md").read_text().lower()
+        # the manuscript split by heading, so the keyed `sections` field —
+        # the location grader's ground truth — is itself held to the text:
+        # a document-wide any() let one of two occurrences drift silently
+        sections = {}
+        heading = ""
+        for ln in manuscript.splitlines():
+            m = re.match(r"#{1,6}\s+(.+?)\s*$", ln)
+            if m:
+                heading = m.group(1).strip()
+                sections.setdefault(heading, [])
+            else:
+                sections.setdefault(heading, []).append(ln)
+        for t in expected["targets"]:
+            # value-bearing probes only: the keyed value and the anchors
+            # that carry a digit — a prose anchor like "flagged" survives
+            # any numeric drift and would bless a stale key
+            probes = [str(t["manuscript_value"])] + [
+                a for a in t.get("anchors", []) if any(c.isdigit() for c in a)]
+            hit = any(anchor_rx(p).search(manuscript) for p in probes)
+            check(hit, f"{t['id']}: manuscript still states the keyed value",
+                  f"none of {probes[:3]}... found" if not hit else "")
+            # ...and states it in EVERY keyed section: drifting one of
+            # two occurrences must fail here, not survive on the other
+            for sec in t.get("sections", []):
+                body = "\n".join(sections.get(sec.lower(), []))
+                hit_s = any(anchor_rx(p).search(body) for p in probes)
+                check(hit_s, f"{t['id']}: the {sec} section still states the keyed value",
+                      "" if hit_s else f"none of {probes[:3]} under the {sec} heading")
+            # a bundled claim must survive as ONE claim: after drifting
+            # the Data sentence to "20 ... and 30 without", other 20s
+            # elsewhere keep a document-wide count above two, so some
+            # single manuscript line must carry the complete multiset
+            bundle = [str(b) for b in (t.get("bundle_expect") or [])]
+            if bundle:
+                def line_has_bundle(ln):
+                    return all(len(anchor_rx(v).findall(ln)) >= bundle.count(v)
+                               for v in set(bundle))
+                ok_b = any(line_has_bundle(ln) for ln in manuscript.splitlines())
+                check(ok_b, f"{t['id']}: one manuscript line carries the bundled claim",
+                      "" if ok_b else f"no line states the complete multiset {bundle}")
+
+        for t in expected["targets"]:
+            tid = t["id"]
+            v = results.get(t["result_key"])
+
+            if t["kind"] == "missing-source":
+                gone = not (fixture / "data" / "wave2_followup.csv").exists()
+                check(gone and v is None, f"{tid}: source absent, pipeline reports no value")
+                check(t["expected"] == "unverifiable", f"{tid}: expected classification is unverifiable")
+                continue
+
+            if t.get("result_scale"):
+                v = v * t["result_scale"]
+            check(abs(v - t["true_value"]) < EPS, f"{tid}: pipeline value equals documented true value",
+                  f"pipeline {v!r} vs documented {t['true_value']!r}")
+            # a target whose claim bundles several pipeline outputs (the
+            # group split) documents the others in also_check, so drift in
+            # any bundled value fails the deterministic layer too
+            for extra_key, extra_val in (t.get("also_check") or {}).items():
+                check(abs(results[extra_key] - extra_val) < EPS,
+                      f"{tid}: {extra_key} equals documented value",
+                      f"pipeline {results.get(extra_key)!r} vs documented {extra_val!r}")
+
+            if t["kind"] == "predicate":
+                assert t["predicate"] == "less_than"
+                cls = "match" if v < t["predicate_value"] else "mismatch"
+                check(cls == t["expected"], f"{tid}: predicate yields expected classification",
+                      f"{v!r} < {t['predicate_value']!r} -> {cls}")
+            else:
+                cls, boundary = classify(v, t["manuscript_value"], t["decimals"])
+                check(cls == t["expected"], f"{tid}: tolerance rule yields expected classification",
+                      f"v={v!r} m={t['manuscript_value']!r} k={t['decimals']} -> {cls}")
+                check(boundary == t["boundary"], f"{tid}: boundary status as documented",
+                      f"boundary={boundary}")
+
+        # gate case: remove the dataset, the pipeline must fail loudly
+        gated = Path(tmp) / "gated"
+        shutil.copytree(src, gated)
+        shutil.rmtree(gated / "results", ignore_errors=True)
+        for rel in expected["gate_case"]["remove"]:
+            (gated / rel).unlink()
+        proc = run_pipeline(gated)
+        check(proc.returncode != 0, "gate case: pipeline exits nonzero without its data")
+        named = all(n in (proc.stderr + proc.stdout) for n in expected["gate_case"]["report_must_name"])
+        check(named, "gate case: failure names the missing input", proc.stderr.strip()[:120])
+
+    print()
+    if failures:
+        print(f"{len(failures)} check(s) FAILED")
+        sys.exit(1)
+    print("all fixture checks passed")
+
+
+if __name__ == "__main__":
+    main()

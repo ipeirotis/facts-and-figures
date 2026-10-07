@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# the jobs execute pull-request code (the eval scripts under test); they
+# need no write token, and an org-level default of contents: write must
+# not reach them
+permissions:
+  contents: read
+
+jobs:
+  fixture-check:
+    name: deterministic fixture check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # the checked-out scripts run in later steps; they must not
+          # inherit a usable token from .git/config
+          persist-credentials: false
+      - name: run the fixture self-check (no LLM)
+        run: python3 evals/check_fixture.py
+      - name: run the grader self-tests (no LLM)
+        run: python3 evals/test_graders.py
+      - name: run the write-boundary hook self-tests (no LLM)
+        run: python3 evals/test_hook.py
+      - name: check for dangling reference citations
+        run: |
+          grep -rhoE 'references/[a-z0-9-]+\.md' -- SKILL.md README.md AGENTS.md references/ \
+            | sort -u | while read -r p; do
+              [ -f "$p" ] || { echo "MISSING: $p"; exit 1; }
+            done
+      - name: check version consistency
+        run: |
+          # the authoritative fields, not an arbitrary occurrence: the
+          # SKILL.md check reads only the frontmatter block, and
+          # plugin.json is parsed as JSON
+          v="$(cat VERSION)"
+          # extract the frontmatter field and compare LITERALLY: a regex
+          # interpolation would let the dots in 0.5.0 match any character
+          sk="$(awk '/^---$/{n++; next} n==1' SKILL.md \
+            | sed -n 's/^[[:space:]]*version: "\(.*\)"[[:space:]]*$/\1/p' | head -1)"
+          [ "$sk" = "$v" ] || { echo "SKILL.md frontmatter version ($sk) != VERSION ($v)"; exit 1; }
+          python3 -c "import json,sys; sys.exit(0 if json.load(open('.claude-plugin/plugin.json'))['version'] == open('VERSION').read().strip() else 1)" \
+            || { echo "plugin.json version != VERSION ($v)"; exit 1; }
+
+  plugin-validate:
+    name: validate plugin manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @anthropic-ai/claude-code
+      - run: claude plugin validate . --strict

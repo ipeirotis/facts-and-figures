@@ -3,7 +3,7 @@ name: facts-and-figures
 description: Verify numbers reported in an academic manuscript against the repository's own analysis pipeline, regenerate a named figure from the same data with improved presentation, or run a new analysis explicitly specified by the author, such as a robustness check, baseline, or subgroup analysis. Use when the repository contains the author's analysis code and its data is reachable as the pipeline defines it, whether that data sits in the repository or in a source the pipeline is configured to read such as a warehouse table or bucket object, and the task requires reproducible computation with command-level provenance. Do not use for prose editing, literature searches, citation verification, or exploratory searches for favorable results.
 license: MIT
 metadata:
-  version: "0.2.1"
+  version: "0.5.0"
   author: ipeirotis
   repo: https://github.com/ipeirotis/facts-and-figures
 ---
@@ -33,7 +33,9 @@ If the request does not identify the capability or target, ask one focused quest
 
 ## Gate the work
 
-Require the author's analysis code in the repository, its data reachable in this session as the pipeline itself defines it (a file in the tree, or a remote source the pipeline is already configured to read and this session can access), and a shell. Require write access for figure regeneration or a new analysis. If an input or tool is missing or unreachable, name it and stop; never estimate, reconstruct, substitute another source, or invent a result.
+Require the author's analysis code in the repository, its data reachable in this session as the pipeline itself defines it (a file in the tree, or a remote source the pipeline is already configured to read and this session can access), and a shell. Require write access for figure regeneration or a new analysis. If a required input or tool is missing or unreachable, name it and stop; an input the pipeline itself treats as optional fails only the values that depend on it (`references/analysis-integrity.md` owns that distinction). Never estimate, reconstruct, substitute another source, or invent a result.
+
+When the session can write, create the run marker `facts-and-figures-out/.active` — an EMPTY file for the default proposal directory, since the hook reads any content line as the name of a custom directory — before the first command, on a failed gate too, whenever the optional companion or any other output will still be authored, since the guard must be armed for every write the run makes; when the author named a different proposal directory, write that directory's path as the marker's single line, which is how the write-boundary hook shipped in `hooks/` finds it. A named proposal directory starts fresh — a new or empty directory, never an existing data, code, or figure directory, whose pre-existing files the write allowance must not cover; the hook refuses a marker naming a non-empty existing directory. The marker's removal is part of the teardown confirmed in Return; if the default `facts-and-figures-out/` directory was created only to hold the marker — a different proposal directory was named and the default is empty once the marker is gone — remove the empty directory with it, so a custom-output run leaves nothing of its own at the repository root.
 
 ## Load the manuscript context and scope the files
 
@@ -57,3 +59,5 @@ Return exactly:
 2. **Method and provenance:** pinned specification, commands with secrets redacted, files, environment, output locations, and confirmed teardown of anything provisioned.
 3. **Results:** complete comparisons or results, including null, adverse, and failed outcomes.
 4. **Author decisions:** proposed values or artifacts, unresolved ambiguities, and what the author must decide before adoption.
+
+Verification additionally writes the machine-readable companion `verification-report.json` into the proposal directory whenever the session can write, carrying the same classifications as the prose; after a failed gate the companion is optional, and `references/verification-report.md` owns its schema and the failed-gate rules. It stays there like all generated work — the marker is torn down, the report is kept.

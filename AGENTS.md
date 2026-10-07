@@ -47,7 +47,20 @@ references/analysis-integrity.md    the protocol: three capabilities, five
 references/figure-design.md         capability 2: what a re-render may change
 references/compute-environment.md   local-first execution, cloud-bootstrap
                                     detection, provenance for remote runs
+agents/claude-code/facts-and-figures.md   subagent wrapper: loads SKILL.md,
+                                    adds only agent-mode adaptations
 agents/openai.yaml                  display metadata for non-Claude agent hosts
+hooks/write-boundary.sh             PreToolUse guard, armed by the run marker
+                                    facts-and-figures-out/.active
+hooks/hooks.json                    plugin hook registration for the guard
+.claude-plugin/                     plugin.json and marketplace.json; the repo
+                                    root is the plugin root (root SKILL.md)
+.github/workflows/                  ci.yml (deterministic checks) and
+                                    agent-eval.yml (headless eval, needs secret)
+evals/                              eval suite: synthetic fixture paper repo,
+                                    answer key, deterministic fixture check,
+                                    agent-in-the-loop runner and grader
+TASKS.md                            development roadmap and definitions of done
 ```
 
 ## Invariants when editing
@@ -77,10 +90,20 @@ agents/openai.yaml                  display metadata for non-Claude agent hosts
   regression however useful it looks.
 - **Additions state a rule, not a preference.** Each one should be checkable
   by reading the output: a reader can tell whether it was followed.
+- **Wrappers point, never restate.** The protocol has one home: `SKILL.md`
+  and `references/`. The subagent wrapper, the hook, and any future packaging
+  direct the reader there and add only what their form requires (the
+  wrapper's agent-mode adaptations, the hook's deny message). A wrapper that
+  paraphrases a rule will drift from it; if a wrapper needs a rule, the rule
+  moves into the skill and the wrapper cites it.
 
 ## Releasing
 
-Update `VERSION`, the `metadata.version` field in `SKILL.md`, and
-`CHANGELOG.md` together. Versions follow semantic versioning: a changed
-output contract, a renamed reference file, or a new hard gate is a major or
-minor bump, not a patch.
+Update `VERSION`, the `metadata.version` field in `SKILL.md`, the
+`version` field in `.claude-plugin/plugin.json`, and `CHANGELOG.md`
+together — plugin installs only receive updates when `plugin.json`'s
+version changes, so a release that skips it never reaches plugin users.
+CI enforces the three-way version match. Versions follow semantic
+versioning: a changed output contract, a renamed reference file, or a new
+hard gate is a major or minor bump, not a patch. Run
+`claude plugin validate . --strict` before releasing.
