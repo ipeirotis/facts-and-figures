@@ -145,7 +145,9 @@ generated tables or caches in place) never runs there, approval or not:
 verification writes nothing of the author's (see the integrity norms
 below), and an author's go-ahead does not change that. Use, in order, a
 read-only or dry-run path the pipeline offers; an output location the
-pipeline lets you redirect into the proposal directory; or a disposable
+pipeline lets you redirect into the proposal directory, only when every
+write it makes goes there (caches, logs, and side tables included, not
+just the main output); or a disposable
 copy inside the proposal directory, made without touching the author's
 repository (`git archive` of the logged commit unpacked there, or a `git
 clone` into it; never `git worktree add`, which writes metadata into the
@@ -209,8 +211,9 @@ Compare, value by value, and classify each as one of:
   A value landing exactly on either endpoint is a tie, and a tie is the one
   case where the two conventions disagree: `1.245` displays as `1.24` under
   half-even, which most numerical libraries use by default. Do not resolve
-  that silently. Report an endpoint hit as a match under the stated
-  convention *and* name it as a boundary case in `Author decisions`, giving
+  that silently. Classify an endpoint hit under the stated convention (the
+  included lower endpoint is a match, the excluded upper endpoint a
+  mismatch) *and* name it as a boundary case in `Author decisions`, giving
   both values, so the author can see that a different rounding mode in their
   own software would print a different number.
 - **mismatch**: the pipeline produces a different value; report both, with

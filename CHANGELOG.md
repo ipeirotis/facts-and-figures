@@ -18,6 +18,11 @@ Codex review findings on the skill as vendored into a manuscript repository (Ili
 - The README's CI gate rejects non-finite values. `json.load` accepts `NaN` and `Infinity`, which passed the numeric check, so a pipeline failure yielding `NaN` could be recorded as a match and pass the gate; the check now requires floats to be finite (`math.isfinite`), while ints pass as they are, since converting a very large one would overflow.
 - The write-boundary hook refuses a run marker under a non-root working directory (`hooks/write-boundary.sh`). With no marker armed, a session whose cwd sat in a subdirectory could create `facts-and-figures-out/.active` there; once the cwd returned to the repository root the ancestor scan no longer found it and the guard went inert for the rest of the run. Raised in Codex review of the hook vendored into IliasTriant/inattentiveness_paper#14; The same check applies to the parallel-mode bootstrap of a second checkout. A candidate with no enclosing root (a non-git checkout reached only through the cwd) keeps its candidacy. `evals/test_hook.py` covers the subdirectory denial and the root bootstrap from a subdirectory cwd, for a single checkout and for a second one.
 
+- An endpoint tie is classified by the stated convention: the included lower endpoint is a match and the excluded upper endpoint a mismatch, both still named as boundary cases. The tie paragraph had said to report any endpoint hit as a match, which certified an upper-endpoint value the manuscript does not display.
+- A redirected output location counts as non-mutating only when every write the pipeline makes goes there (caches, logs, side tables), not just its main output; otherwise the disposable copy runs.
+- The subagent wrapper and README state that `omitClaudeMd` needs Claude Code v2.1.271 or later; on older versions the field is ignored, and the wrapper's rule to treat those files as read-only input applies to what loaded.
+- The README's CI gate checks field types, not truthiness: `location`, `reported`, `tolerance`, `producing_command`, and `reason` must be non-empty strings, and `classification` one of the three classes.
+
 ## [0.5.0] - 2026-10-07
 
 Completes the roadmap's items 4 and 5: the repository is now a Claude Code plugin, and verification is scriptable end to end. Minor bump: the output contract gains the machine-readable companion.

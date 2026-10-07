@@ -40,7 +40,7 @@ mkdir -p ~/.claude/agents   # the directory does not exist on a fresh install
 cp agents/claude-code/facts-and-figures.md ~/.claude/agents/   # or <project>/.claude/agents/
 ```
 
-Then delegate: *"Use the facts-and-figures agent to verify the numbers in Table 2."* The subagent runs the same protocol in its own context. That isolation is an integrity feature, not just hygiene: the run receives only the pinned request, never the surrounding conversation where the author may have said what they hope the numbers show — the contamination the no-forking-paths rule exists to prevent. It also keeps pipeline logs out of the main conversation. Runs can go in parallel only across separate checkouts: within one checkout, the single run marker `facts-and-figures-out/.active` coordinates the write boundary, so concurrent runs would fight over it and over `verification-report.json`. The wrapper carries no protocol of its own; it locates the installed skill and follows `SKILL.md`.
+Then delegate: *"Use the facts-and-figures agent to verify the numbers in Table 2."* The subagent runs the same protocol in its own context. That isolation is an integrity feature, not just hygiene: the run receives only the pinned request, never the surrounding conversation where the author may have said what they hope the numbers show — the contamination the no-forking-paths rule exists to prevent. It also keeps pipeline logs out of the main conversation. Keeping the manuscript repository's `CLAUDE.md` files out of that context relies on the wrapper's `omitClaudeMd` field, which needs Claude Code v2.1.271 or later (check with `claude --version`); older versions ignore it and load them, leaving only the wrapper's instruction to disregard them. Runs can go in parallel only across separate checkouts: within one checkout, the single run marker `facts-and-figures-out/.active` coordinates the write boundary, so concurrent runs would fight over it and over `verification-report.json`. The wrapper carries no protocol of its own; it locates the installed skill and follows `SKILL.md`.
 
 ### Optional: enforce the write boundary mechanically (Claude Code)
 
@@ -222,14 +222,19 @@ jobs:
               isinstance(x, int) or (isinstance(x, float) and math.isfinite(x)))
           def numeric(x): return num(x) or (isinstance(x, list) and x
                                             and all(num(c) for c in x))
+          # text fields must be non-empty strings, not merely truthy: a
+          # numeric reported or a list-valued command is not the schema
+          def text(x): return isinstance(x, str) and x.strip() != ''
           shapeless = [v for v in vals
-                       if not (v.get('location') and v.get('reported')
-                               and v.get('classification'))
+                       if not (text(v.get('location')) and text(v.get('reported'))
+                               and v.get('classification') in
+                                   ('match', 'mismatch', 'unverifiable'))
                        or (v.get('classification') in ('match', 'mismatch')
-                           and (not numeric(v.get('computed')) or not v.get('tolerance')
-                                or not v.get('producing_command')))
+                           and (not numeric(v.get('computed'))
+                                or not text(v.get('tolerance'))
+                                or not text(v.get('producing_command'))))
                        or (v.get('classification') == 'unverifiable'
-                           and not v.get('reason'))]
+                           and not text(v.get('reason')))]
           if shapeless:
               print('records missing required fields:', shapeless[:2]); sys.exit(1)
           bad = [v for v in vals if v['classification'] != 'match']
