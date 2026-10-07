@@ -252,6 +252,16 @@ MUTATIONS = [
     ("gate reasons citing an unrelated file", ["--gate"], "mock_gate.json",
      lambda d: [r.update(reason="README.md is missing from the repository")
                 for r in d["values"]], 1),
+    # ...and a lookalike of the removed input is such a file: the
+    # basename match is bounded
+    ("gate reasons citing a lookalike of the removed input", ["--gate"],
+     "mock_gate.json",
+     lambda d: [r.update(reason="data/notworkers.csv is missing")
+                for r in d["values"]], 1),
+    # an exact integer count owes no relative slack
+    ("permutation count off by a millionth", [], "mock_good.json",
+     lambda d: [r.update(computed=10000.000009) for r in d["values"]
+                if r.get("reported") == "10,000"], 1),
     # ...while citing the pipeline script it tried to run stays
     # legitimate
     ("gate reasons citing the pipeline script", ["--gate"], "mock_gate.json",

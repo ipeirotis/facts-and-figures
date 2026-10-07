@@ -74,6 +74,14 @@ ABSENCE_WORD_RE = re.compile(
     r"|not distributed|did not run|never ran|could not|no such")
 
 
+def names_file(name, text):
+    """Bounded filename match: the basename of NAME appears in TEXT as
+    its own token, not inside a longer filename — notworkers.csv does
+    not name workers.csv."""
+    base = re.escape(name.split("/")[-1].lower())
+    return bool(re.search(r"(?<![\w.-])" + base + r"(?!\w)", text))
+
+
 def reason_denies(reason):
     """True when a reason contradicts the unverifiable classification it
     sits on: it denies the absence, credits the run with success, or
@@ -117,7 +125,11 @@ def close(c, t):
     """Equality up to float summation noise (~1e-13) and JSON round-trip,
     SCALED: a fixed absolute epsilon would let a small value hide a
     materially different one — a permutation p-value 0.9% off sat within
-    1e-6 of the documented 9.999e-05."""
+    1e-6 of the documented 9.999e-05. Integer targets compare exactly:
+    counts are emitted exactly and carry no float noise, so the relative
+    term owes them no slack (10000.000009 is not the count 10000)."""
+    if isinstance(t, int) and not isinstance(t, bool):
+        return c == t
     return abs(c - t) <= 1e-9 + 1e-9 * abs(t)
 
 
@@ -500,7 +512,7 @@ def grade_gate(report, expected):
     bad_reasons = [str(r.get("reason"))[:60] for r in values
                    if reason_denies(str(r.get("reason", "")).lower())
                    or (not any(w in str(r.get("reason", "")).lower() for w in gate_words)
-                       and not any(n.split("/")[-1] in str(r.get("reason", "")).lower()
+                       and not any(names_file(n, str(r.get("reason", "")).lower())
                                    for n in removed))]
     g.check(not bad_reasons, "every reason explains an absence or the failed gate",
             f"reasons: {bad_reasons[:2]}" if bad_reasons else "")
@@ -524,7 +536,9 @@ def grade_gate(report, expected):
     misattributed = []
     for r in values:
         reason = str(r.get("reason", "")).lower()
-        if any(n.split("/")[-1] in reason for n in removed):
+        # bounded, so notworkers.csv does not exempt a reason as naming
+        # the removed workers.csv
+        if any(names_file(n, reason) for n in removed):
             continue
         if any(w in reason for w in ("failed gate", "gate failed", "gate failure")):
             continue
