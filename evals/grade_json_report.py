@@ -33,17 +33,14 @@ TOP_REQUIRED = ("schema", "skill_version", "manuscript_files", "pipeline_command
 
 
 def pair_records(values, anchors):
-    """Records covering a target. The `reported` field is authoritative —
-    pairing on location/note text lets one record's cross-value arithmetic
-    (a mismatch note quoting the group means) contaminate another target —
-    so free text is a fallback only when no `reported` field matches."""
+    """Records covering a target, paired on the `reported` field only. The
+    schema requires `reported` to carry the manuscript value verbatim, so a
+    record only locatable through its note or location is non-compliant —
+    and an earlier free-text fallback let a record pair on a note mention
+    while asserting a different value in `reported`."""
     lowered = [a.lower() for a in anchors]
-    by_reported = [r for r in values
-                   if any(a in str(r.get("reported", "")).lower() for a in lowered)]
-    if by_reported:
-        return by_reported
     return [r for r in values
-            if any(a in f"{r.get('location', '')} {r.get('note', '')}".lower() for a in lowered)]
+            if any(a in str(r.get("reported", "")).lower() for a in lowered)]
 
 
 def computed_matches(computed, target):

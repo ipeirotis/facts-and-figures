@@ -69,7 +69,11 @@ for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
     if not scratch:
         continue
     root = os.path.realpath(scratch)
-    if project == root or project.startswith(root + os.sep):
+    # a scratch root must be disjoint from the project: one containing the
+    # project would whitelist the checkout, one inside it (TMPDIR pointed
+    # at data/) would whitelist author files
+    if (project == root or project.startswith(root + os.sep)
+            or root.startswith(project + os.sep)):
         continue
     allowed.append(root)
 

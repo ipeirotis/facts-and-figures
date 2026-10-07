@@ -84,6 +84,12 @@ def main():
               extra_env={"FACTS_AND_FIGURES_OUT": ".."})
         (proj.parent / ".active").unlink()
 
+        # a scratch root inside the project must not whitelist author files
+        (proj / "data").mkdir(exist_ok=True)
+        check("TMPDIR inside project: data write still denied",
+              write_payload(proj, proj / "data" / "workers.csv"), proj, want_deny=True,
+              extra_env={"TMPDIR": str(proj / "data")})
+
         # project checkout itself under /tmp — the ancestor-root regression
         tproj = Path(tmp_base) / "paper"
         (tproj / "facts-and-figures-out").mkdir(parents=True)
