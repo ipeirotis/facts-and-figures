@@ -159,11 +159,14 @@ def check_known_inputs(g, report, expected):
     fdir = EVALS / expected["fixture"]
     fix_files = {str(p.relative_to(fdir)).replace("\\", "/").lower()
                  for p in fdir.rglob("*") if p.is_file()}
-    musts = [str(t.get("reason_must_contain", "")).lower()
-             for t in expected["targets"] if t.get("reason_must_contain")]
+    # the unavailable source is exempted by its KEYED PATH, not its
+    # basename: unrelated/wave2_followup.csv is a path the pipeline
+    # never names, and a basename exemption would certify it
+    spaths = [norm_path(t.get("source_path", "")).lower()
+              for t in expected["targets"] if t.get("source_path")]
     unknown = [str(k)[:50] for k in (report.get("data_versions") or {})
                if not any(names_input(k, rel) for rel in fix_files)
-               and not any(names_file(m, norm_path(str(k)).lower()) for m in musts)]
+               and not any(names_input(k, sp) for sp in spaths)]
     g.check(not unknown, "every data_versions entry names a known input",
             f"unknown entries: {unknown[:3]}" if unknown else "")
 
@@ -533,10 +536,14 @@ def grade_targets(report, expected):
             # rejected this for its removed input all along. The entry
             # may be legitimately absent (there is nothing to hash);
             # when present it must record the absence, not a hash
-            if must:
+            spath = norm_path(str(t.get("source_path", ""))).lower()
+            if spath:
+                # located by keyed path, as every data_versions lookup
+                # is — a basename match would adopt an entry for a path
+                # the pipeline never names
                 dv_entries = [str(v) for k, v in
                               (report.get("data_versions") or {}).items()
-                              if names_file(must, norm_path(k).lower())]
+                              if names_input(k, spath)]
                 faked = [e[:60] for e in dv_entries
                          if re.search(r"[0-9a-f]{40,}", e.lower())
                          or not re.search(

@@ -530,6 +530,21 @@ def main():
               write_payload(p8, p8 / "facts-and-figures-out" / ".active",
                             content="data/workers.csv\n"), p8, want_deny=True)
 
+        # ...and so would a custom path reached through a symlink: the
+        # armed guard requires lexical == resolved, so blessing the
+        # bootstrap would leave the run stuck
+        p14 = Path(home_base) / "paper14"
+        (p14 / "facts-and-figures-out").mkdir(parents=True)
+        (p14 / "real-elsewhere").mkdir()
+        (p14 / "alias14").symlink_to(p14 / "real-elsewhere")
+        check("bootstrap marker naming a path through a symlink: denied",
+              write_payload(p14, p14 / "facts-and-figures-out" / ".active",
+                            content="alias14/new-out\n"), p14, want_deny=True)
+        check("bootstrap marker naming the real directory: allowed",
+              write_payload(p14, p14 / "facts-and-figures-out" / ".active",
+                            content="real-elsewhere/new-out\n"), p14,
+              want_deny=False)
+
         # a home-relative custom directory (~/...) expands as it does for
         # write targets: the guard must protect the directory the author
         # actually named, not a literal ~ under the project

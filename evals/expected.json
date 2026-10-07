@@ -126,6 +126,7 @@
       "boundary": false,
       "anchors": ["64%", "64 percent", "retention"],
       "reason_must_contain": "wave2_followup.csv",
+      "source_path": "data/wave2_followup.csv",
       "note": "data/wave2_followup.csv is not distributed; no substitute source is acceptable"
     },
     {

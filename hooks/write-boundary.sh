@@ -185,8 +185,19 @@ def bootstrap_checks(cands):
         # ~/fnf-out means the home directory, not a literal ~ under the
         # project — unexpanded, the freshness check would inspect the
         # wrong directory and every real write would be denied
-        named_dir = os.path.realpath(
-            os.path.normpath(os.path.join(c, os.path.expanduser(line))))
+        named_lex = os.path.normpath(os.path.join(c, os.path.expanduser(line)))
+        named_dir = os.path.realpath(named_lex)
+        # a custom path reached through a symlink is refused at arming,
+        # exactly as the armed guard would refuse its writes — allowing
+        # the bootstrap would leave the run stuck behind a marker the
+        # hook itself approved
+        if named_dir != named_lex:
+            deny(
+                "facts-and-figures write boundary: this marker names {l} as the "
+                "proposal directory, but that path resolves to {d} through a "
+                "symlink. Name the real directory instead.".format(
+                    l=named_lex, d=named_dir)
+            )
         if os.path.exists(named_dir) and not os.path.isdir(named_dir):
             deny(
                 "facts-and-figures write boundary: this marker names {d} as the "

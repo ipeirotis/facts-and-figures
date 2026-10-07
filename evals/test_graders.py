@@ -443,6 +443,12 @@ MUTATIONS = [
     ("data_versions entry for the pipeline script", [], "mock_good.json",
      lambda d: d["data_versions"].update(
          {"analysis/run_analysis.py": "sha256:" + "ab" * 32}), 0),
+    # the unavailable source is exempt by its keyed PATH, not its
+    # basename: unrelated/wave2_followup.csv names a path the pipeline
+    # never reads
+    ("data_versions entry for a relocated wave-2 path", [], "mock_good.json",
+     lambda d: d["data_versions"].update(
+         {"unrelated/wave2_followup.csv": "absent - not distributed"}), 1),
     # a one-letter extension is still a filename when the stem is real,
     # and a dotfile is a filename with no stem at all
     ("gate reasons citing a single-letter-extension file", ["--gate"],
