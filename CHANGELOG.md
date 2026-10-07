@@ -3,7 +3,7 @@
 All notable changes to facts-and-figures (called paper-analyst before v0.2.0) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versions use [Semantic Versioning](https://semver.org/).
 
-## [0.5.0] - 2026-08-16
+## [0.5.0] - 2026-10-07
 
 Completes the roadmap's items 4 and 5: the repository is now a Claude Code plugin, and verification is scriptable end to end. Minor bump: the output contract gains the machine-readable companion.
 
@@ -22,7 +22,7 @@ Completes the roadmap's items 4 and 5: the repository is now a Claude Code plugi
 - Two refinements from the first live run against the new contract, which the skill otherwise passed end to end — the agent wrote the companion unprompted, classified all ten values it inventoried correctly, and kept it through teardown while removing the marker. The `boundary` field is optional and defaults to false (a live report set it null on an unverifiable value; requiring an explicit false on every record was rigidity, not integrity), and the JSON grader pairs records to targets by the `reported` field first, since pairing on note text let the mismatch record's cross-value arithmetic contaminate the group-mean targets.
 - The release checklist in `AGENTS.md` adds `.claude-plugin/plugin.json` to the version-bump set — plugin users only receive updates when that version changes — and asks for strict plugin validation before releasing.
 
-## [0.4.0] - 2026-08-16
+## [0.4.0] - 2026-10-07
 
 Adds the eval suite (TASKS.md item 3). The skill's runtime files are unchanged; what is new is the apparatus for checking that the protocol is actually followed.
 
@@ -39,7 +39,7 @@ Adds the eval suite (TASKS.md item 3). The skill's runtime files are unchanged; 
 - `run_agent_eval.sh` saves each report outside its workspace. Piping through `tee` into the workspace pre-created an empty `report.md` that the agent under eval noticed and dutifully asked about.
 - Both live cases pass as of this release: the verification agent found all seven targets, called the transposed 6.23 a mismatch, disclosed the 12.5%-versus-13% boundary tie, classified the undistributed wave-2 value unverifiable, and checked `p < 0.001` as a predicate; the gated agent named the missing dataset, classified everything unverifiable, and declined to substitute unrelated credentials for the missing source.
 
-## [0.3.0] - 2026-08-16
+## [0.3.0] - 2026-10-07
 
 Adds an execution form and a mechanical guard around the existing protocol without moving the protocol itself: `SKILL.md` and `references/` remain the single source of truth, and the new files point at them rather than restating them. Minor bump per the release rule — the run marker is a new observable step in the gate, and two new install surfaces exist.
 
@@ -50,6 +50,11 @@ Adds an execution form and a mechanical guard around the existing protocol witho
 - A run-marker rule in `SKILL.md`'s gate step: when the gates pass and the session can write, create `facts-and-figures-out/.active` before the first command; its removal falls under the teardown already confirmed in Return. Read-only verification sessions, which cannot create the marker, degrade gracefully — the hook simply stays inert.
 - `TASKS.md`, the development roadmap with definitions of done. Open items: an eval suite over a fixture paper repository, plugin packaging so skill + agent + hook install as one unit, and a headless/CI mode built on a machine-readable report.
 - An invariant in `AGENTS.md`: wrappers point, never restate. The subagent wrapper, the hook, and any future packaging direct the reader to `SKILL.md` and add only what their form requires; a wrapper that paraphrases a rule will drift from it.
+## [0.2.1] - 2026-10-05
+
+### Fixed
+
+- The rounding-tolerance interval in verification step 5 of `references/analysis-integrity.md` is now stated on magnitudes, with round-half-up defined as half away from zero (Python's `decimal.ROUND_HALF_UP`). The old interval `m - u/2 <= v < m + u/2` put the inclusive and exclusive endpoints on the wrong side for negative values: against a reported `-1.25` it accepted `-1.255`, which displays as `-1.26`, and rejected `-1.245`, which displays as `-1.25`.
 
 ## [0.2.0] - 2026-08-15
 
