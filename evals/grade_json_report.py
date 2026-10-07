@@ -344,6 +344,13 @@ def grade_top_level(g, report, expected):
                            for tok in place_tokens)]
     g.check(not bad_locs, "record locations identify a manuscript place",
             f"unusable locations: {bad_locs[:3]}" if bad_locs else "")
+    # an EXACT copy of a record double-counts a checked value and adds no
+    # information — the schema has one record per manuscript value. Two
+    # records for two occurrences of the same value are legitimate and
+    # differ at least in location, as the live runs wrote them
+    dupes = [str(v)[:60] for i, v in enumerate(values) if v in values[:i]]
+    g.check(not dupes, "no record is an exact duplicate of another",
+            f"duplicates: {dupes[:2]}" if dupes else "")
     return values
 
 

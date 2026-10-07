@@ -203,6 +203,19 @@ def grade_gate(report, expected):
         else:
             print(f"FAIL  gate: none of {gc['report_must_contain_any']} appear near {name}")
             ok = False
+    # the failed-gate contract puts the missing prerequisite in front of
+    # the author as THE decision: Author decisions must name the removed
+    # input, not merely exist as a heading while the whole-report scan
+    # finds the name elsewhere. A missing heading is grade_sections'
+    # failure already, so only a present section is inspected
+    decisions = section_span(report, "author decisions")
+    if decisions is not None:
+        for name in gc["report_must_name"]:
+            if names_file(name, decisions.lower()):
+                print(f"PASS  gate: Author decisions raises {name}")
+            else:
+                print(f"FAIL  gate: Author decisions never names {name}")
+                ok = False
     lines = report.splitlines()
     for t in expected["targets"]:
         asserted = assertions_for(lines, t["anchors"]) - {"unverifiable"}

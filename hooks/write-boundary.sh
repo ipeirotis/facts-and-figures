@@ -181,7 +181,12 @@ def bootstrap_checks(cands):
         line = lines[0].strip() if lines else ""
         if not line or "\x00" in line or len(line) > 4096:
             continue
-        named_dir = os.path.realpath(os.path.normpath(os.path.join(c, line)))
+        # ~ expands as it does for write targets: an author naming
+        # ~/fnf-out means the home directory, not a literal ~ under the
+        # project — unexpanded, the freshness check would inspect the
+        # wrong directory and every real write would be denied
+        named_dir = os.path.realpath(
+            os.path.normpath(os.path.join(c, os.path.expanduser(line))))
         try:
             occupied = os.path.isdir(named_dir) and bool(os.listdir(named_dir))
         except OSError:
@@ -251,7 +256,9 @@ if "\x00" in named or len(named) > 4096:
 # marker content, so FACTS_AND_FIGURES_OUT=data would have handed the
 # dataset to the allowance on an empty marker
 out_dir = named or "facts-and-figures-out"
-proposal_lexical = os.path.normpath(os.path.join(project, out_dir))
+# the same ~ expansion the bootstrap applies — the armed path must guard
+# the directory the author actually named
+proposal_lexical = os.path.normpath(os.path.join(project, os.path.expanduser(out_dir)))
 proposal = os.path.realpath(proposal_lexical)
 
 

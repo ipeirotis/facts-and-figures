@@ -524,6 +524,21 @@ def main():
         check("custom dir filled after its marker: further writes allowed",
               write_payload(p12, p12 / "custom12" / "s.py"), p12, want_deny=False)
 
+        # a home-relative custom directory (~/...) expands as it does for
+        # write targets: the guard must protect the directory the author
+        # actually named, not a literal ~ under the project
+        p13 = Path(home_base) / "paper13"
+        fakehome = Path(home_base) / "home13"
+        (fakehome / "fnf-out").mkdir(parents=True)
+        (p13 / "facts-and-figures-out").mkdir(parents=True)
+        (p13 / "facts-and-figures-out" / ".active").write_text("~/fnf-out\n")
+        check("home-relative custom dir: proposal write allowed",
+              write_payload(p13, fakehome / "fnf-out" / "report.json"), p13,
+              want_deny=False, extra_env={"HOME": str(fakehome)})
+        check("home-relative custom dir: manuscript write still denied",
+              write_payload(p13, p13 / "manuscript.md"), p13, want_deny=True,
+              extra_env={"HOME": str(fakehome)})
+
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)
         check("TMPDIR inside project: data write still denied",

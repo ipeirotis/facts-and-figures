@@ -408,6 +408,15 @@ MUTATIONS = [
                                 "dataset the pipeline reads) and the "
                                 "pipeline did not run")
                 for r in d["values"]], 0),
+    # an exact copy of a record double-counts a checked value
+    ("duplicate record appended", [], "mock_good.json",
+     lambda d: d["values"].append(d["values"][0]), 1),
+    # ...while a second record for a second occurrence, differing in
+    # location, is how the live runs legitimately report repeats
+    ("second occurrence recorded separately", [], "mock_good.json",
+     lambda d: d["values"].append(
+         {**[v for v in d["values"] if v.get("reported") == "6.23"][0],
+          "location": "manuscript.md, Abstract"}), 0),
 ]
 
 
@@ -501,6 +510,13 @@ MD_MUTATIONS = [
     # be the only grading path when the optional gate companion is absent
     ("removed input replaced by a lookalike", "mock_gate.md", ["--gate"],
      _replacing("workers.csv", "notworkers.csv"), 1),
+    # the failed-gate contract puts the missing prerequisite in front of
+    # the author: naming it elsewhere while Author decisions sits empty
+    # does not surface the decision
+    ("gate action removed from Author decisions", "mock_gate.md", ["--gate"],
+     _replacing("Restore data/workers.csv or point the pipeline at the "
+                "intended dataset.",
+                "Decide how to proceed."), 1),
 ]
 
 
