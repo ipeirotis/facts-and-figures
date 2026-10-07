@@ -48,18 +48,25 @@ def pair_records(values, anchors):
 
 def computed_matches(computed, target):
     """The record's computed value must equal the documented true value; a
-    percent target may be recorded in either unit (0.125 or 12.5), and a
-    record whose reported claim bundles several quantities (a count and its
-    seed, the two group sizes) may carry them as a list — any element equal
-    to the documented value counts."""
-    if isinstance(computed, (list, tuple)):
-        return any(computed_matches(c, target) for c in computed)
-    if not isinstance(computed, (int, float)):
-        return False
-    candidates = [target["true_value"]]
+    percent target may be recorded in either unit (0.125 or 12.5). A record
+    whose reported claim bundles several quantities (the two group sizes, a
+    count and its seed) may carry them as a list — but then every element
+    must be a documented value (the true value or one the answer key's
+    bundle_allowed names), and at least one must be the true value, so a
+    bundle cannot smuggle an unverified number past grading."""
+    true_candidates = [target["true_value"]]
     if target.get("result_scale"):
-        candidates.append(target["true_value"] / target["result_scale"])
-    return any(abs(computed - c) < EPS for c in candidates)
+        true_candidates.append(target["true_value"] / target["result_scale"])
+
+    def is_true(c):
+        return isinstance(c, (int, float)) and any(abs(c - t) < EPS for t in true_candidates)
+
+    if isinstance(computed, (list, tuple)):
+        allowed = true_candidates + list(target.get("bundle_allowed", []))
+        def is_allowed(c):
+            return isinstance(c, (int, float)) and any(abs(c - a) < EPS for a in allowed)
+        return bool(computed) and any(is_true(c) for c in computed) and all(is_allowed(c) for c in computed)
+    return is_true(computed)
 
 
 class Grader:
@@ -125,6 +132,9 @@ def grade_targets(report, expected):
 def grade_gate(report, expected):
     g = Grader()
     values = grade_top_level(g, report)
+    for t in expected["targets"]:
+        g.check(bool(pair_records(values, t["anchors"])),
+                f"gate: {t['id']} covered by a record")
     g.check(all(r.get("classification") == "unverifiable" for r in values),
             "every record is unverifiable after the failed gate",
             str(sorted({str(r.get('classification')) for r in values})))

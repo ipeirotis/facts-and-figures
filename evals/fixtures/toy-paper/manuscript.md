@@ -32,5 +32,7 @@ workers returned to the platform.
 
 `analysis/run_analysis.py` reproduces every number above from
 `data/workers.csv`; run `python3 analysis/run_analysis.py` from the
-repository root. The wave-2 follow-up file (`data/wave2_followup.csv`) is
+repository root, optionally passing an output directory as its first
+argument to write `results.json` outside the tree (default: `results/`).
+The wave-2 follow-up file (`data/wave2_followup.csv`) is
 not distributed with this repository under the terms of our data agreement.

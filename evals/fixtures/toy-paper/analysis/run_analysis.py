@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Analysis pipeline for "Experience and Response Quality in Microtask Work".
 
-Reads data/workers.csv, writes results/results.json, and prints every
-computed quantity. Deterministic: the permutation test runs with a fixed
-seed, and no step depends on wall-clock time or environment state.
+Reads data/workers.csv, writes results.json, and prints every computed
+quantity. Deterministic: the permutation test runs with a fixed seed, and
+no step depends on wall-clock time or environment state.
+
+Usage: python3 analysis/run_analysis.py [output_dir]
+The optional output directory (default: results/ at the repository root)
+lets a reviewer or verification tool write results.json outside the
+working tree without touching anything else.
 
 The wave-2 follow-up file (data/wave2_followup.csv) is not distributed with
 this repository (see manuscript.md, "Data and code"). When it is absent the
@@ -19,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "workers.csv"
 WAVE2 = ROOT / "data" / "wave2_followup.csv"
-OUT = ROOT / "results"
+OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "results"
 
 PERM_SEED = 20260816
 N_PERM = 10_000
@@ -71,7 +76,7 @@ def main():
         results["retention_wave2"] = None
         print(f"note: {WAVE2} not found; wave-2 retention not computed", file=sys.stderr)
 
-    OUT.mkdir(exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "results.json").write_text(json.dumps(results, indent=2) + "\n")
     for key, val in results.items():
         print(f"{key}: {val}")

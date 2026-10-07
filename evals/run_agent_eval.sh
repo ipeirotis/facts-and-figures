@@ -100,12 +100,17 @@ if command -v claude >/dev/null 2>&1; then
     exit "$rc"
 else
     cat <<EOF
-claude CLI not found; run each case yourself, saving the agent's report:
+claude CLI not found; run each case yourself, saving the agent's report,
+then grade the prose AND the machine-readable companion:
 
   cd $WORK/verify && claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/verify-report.md
   python3 $EVALS_DIR/grade_report.py $WORK/verify-report.md
+  python3 $EVALS_DIR/grade_json_report.py $WORK/verify/facts-and-figures-out/verification-report.json
+  # a missing companion in the writable verify workspace is a FAILURE
 
   cd $WORK/gated && claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/gated-report.md
   python3 $EVALS_DIR/grade_report.py --gate $WORK/gated-report.md
+  # optional on a failed gate, but grade it whenever it was written:
+  python3 $EVALS_DIR/grade_json_report.py --gate $WORK/gated/facts-and-figures-out/verification-report.json
 EOF
 fi

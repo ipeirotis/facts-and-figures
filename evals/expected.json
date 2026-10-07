@@ -123,7 +123,9 @@
       "kind": "point",
       "expected": "match",
       "boundary": false,
-      "anchors": ["10,000", "10000", "n_permutations"]
+      "anchors": ["10,000", "10000", "n_permutations"],
+      "bundle_allowed": [20260816],
+      "note": "a record may bundle the permutation count with the documented seed"
     },
     {
       "id": "perm-p",

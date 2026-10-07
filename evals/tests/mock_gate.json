@@ -11,6 +11,22 @@
   },
   "values": [
     {
+      "location": "manuscript.md, Abstract and Data",
+      "reported": "40 workers",
+      "classification": "unverifiable",
+      "computed": null,
+      "boundary": false,
+      "reason": "required input data/workers.csv is absent"
+    },
+    {
+      "location": "manuscript.md, Data",
+      "reported": "20 / 20",
+      "classification": "unverifiable",
+      "computed": null,
+      "boundary": false,
+      "reason": "required input data/workers.csv is absent"
+    },
+    {
       "location": "manuscript.md, Data",
       "reported": "71.48",
       "classification": "unverifiable",
@@ -20,7 +36,31 @@
     },
     {
       "location": "manuscript.md, Results",
+      "reported": "74.64",
+      "classification": "unverifiable",
+      "computed": null,
+      "boundary": false,
+      "reason": "required input data/workers.csv is absent"
+    },
+    {
+      "location": "manuscript.md, Results",
+      "reported": "68.32",
+      "classification": "unverifiable",
+      "computed": null,
+      "boundary": false,
+      "reason": "required input data/workers.csv is absent"
+    },
+    {
+      "location": "manuscript.md, Abstract and Results",
       "reported": "6.23",
+      "classification": "unverifiable",
+      "computed": null,
+      "boundary": false,
+      "reason": "required input data/workers.csv is absent"
+    },
+    {
+      "location": "manuscript.md, Data",
+      "reported": "13%",
       "classification": "unverifiable",
       "computed": null,
       "boundary": false,
@@ -33,6 +73,22 @@
       "computed": null,
       "boundary": false,
       "reason": "data/wave2_followup.csv is not distributed"
+    },
+    {
+      "location": "manuscript.md, Results",
+      "reported": "10,000",
+      "classification": "unverifiable",
+      "computed": null,
+      "boundary": false,
+      "reason": "required input data/workers.csv is absent"
+    },
+    {
+      "location": "manuscript.md, Abstract and Results",
+      "reported": "p < 0.001",
+      "classification": "unverifiable",
+      "computed": null,
+      "boundary": false,
+      "reason": "required input data/workers.csv is absent"
     }
   ]
 }
