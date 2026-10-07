@@ -60,7 +60,11 @@ if not target:
 cwd = payload.get("cwd") or project
 resolved = os.path.realpath(os.path.join(cwd, os.path.expanduser(target)))
 
-allowed = [proposal]
+allowed = []
+# the proposal directory is allowed unless it equals or contains the
+# project, where FACTS_AND_FIGURES_OUT=.. would whitelist the whole tree
+if proposal != project and not project.startswith(proposal + os.sep):
+    allowed.append(proposal)
 for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
     if not scratch:
         continue

@@ -24,17 +24,18 @@ HOOK = Path(__file__).resolve().parent.parent / "hooks" / "write-boundary.sh"
 failures = 0
 
 
-def run_hook(payload, project):
+def run_hook(payload, project, extra_env=None):
     env = dict(os.environ, CLAUDE_PROJECT_DIR=str(project))
     env.pop("FACTS_AND_FIGURES_OUT", None)
+    env.update(extra_env or {})
     data = payload if isinstance(payload, str) else json.dumps(payload)
     return subprocess.run(["bash", str(HOOK)], input=data, env=env,
                           capture_output=True, text=True)
 
 
-def check(label, payload, project, want_deny):
+def check(label, payload, project, want_deny, extra_env=None):
     global failures
-    proc = run_hook(payload, project)
+    proc = run_hook(payload, project, extra_env)
     denied = '"deny"' in proc.stdout
     ok = proc.returncode == 0 and denied == want_deny
     print(f"{'PASS' if ok else 'FAIL'}  {label}"
@@ -75,6 +76,13 @@ def main():
         check("marker: 300 KiB write outside still denied (stdin, no E2BIG)",
               write_payload(proj, proj / "manuscript.md", content="A" * 300_000),
               proj, want_deny=True)
+
+        # a proposal override that contains the project must not whitelist it
+        (proj.parent / ".active").touch()
+        check("FACTS_AND_FIGURES_OUT=..: manuscript write still denied",
+              write_payload(proj, proj / "manuscript.md"), proj, want_deny=True,
+              extra_env={"FACTS_AND_FIGURES_OUT": ".."})
+        (proj.parent / ".active").unlink()
 
         # project checkout itself under /tmp — the ancestor-root regression
         tproj = Path(tmp_base) / "paper"

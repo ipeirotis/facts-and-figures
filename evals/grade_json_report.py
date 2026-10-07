@@ -105,8 +105,15 @@ def grade_targets(report, expected):
         cls = {r.get("classification") for r in recs}
         g.check(cls == {t["expected"]}, f"{t['id']}: classified {t['expected']}",
                 f"report says {sorted(map(str, cls))}")
-        boundary = any(r.get("boundary") is True for r in recs)
-        g.check(boundary == t["boundary"], f"{t['id']}: boundary flag is {t['boundary']}")
+        # a boundary target's tie holds for every record asserting the
+        # comparison, so one record claiming otherwise is an unverified
+        # assertion, not a tolerable sibling
+        if t["boundary"]:
+            g.check(all(r.get("boundary") is True for r in recs),
+                    f"{t['id']}: boundary flag is True on every record")
+        else:
+            g.check(not any(r.get("boundary") is True for r in recs),
+                    f"{t['id']}: boundary flag is False")
 
         if t["expected"] == "unverifiable":
             g.check(all(r.get("computed") is None for r in recs),
@@ -118,8 +125,13 @@ def grade_targets(report, expected):
             g.check(all(computed_matches(r.get("computed"), t) for r in recs),
                     f"{t['id']}: correct computed value on every record",
                     f"documented {t['true_value']!r}, report has {[r.get('computed') for r in recs]}")
-            g.check(all(r.get("producing_command") for r in recs),
-                    f"{t['id']}: producing command on every record")
+            # the command cannot be verified verbatim (supplementary logged
+            # commands are legitimate), but it must at least invoke the
+            # fixture's runtime: a fabricated "echo 0" is not provenance
+            token = expected.get("producing_command_must_contain", "")
+            g.check(all(token in str(r.get("producing_command", "")).lower() for r in recs),
+                    f"{t['id']}: plausible producing command on every record",
+                    f"commands: {[r.get('producing_command') for r in recs]}" if token else "")
             g.check(all(r.get("tolerance") for r in recs),
                     f"{t['id']}: tolerance/predicate stated on every record")
 

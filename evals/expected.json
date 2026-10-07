@@ -1,6 +1,7 @@
 {
   "fixture": "fixtures/toy-paper",
   "pipeline_command": "python3 analysis/run_analysis.py",
+  "producing_command_must_contain": "python",
   "results_file": "results/results.json",
   "targets": [
     {
