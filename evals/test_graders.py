@@ -211,6 +211,13 @@ MUTATIONS = [
      lambda d: [r.update(reason="data/wave2_followup.csv is present and verified")
                 for r in d["values"]
                 if r.get("classification") == "unverifiable"], 1),
+    # ...while historical context beside a current absence statement
+    # stays truthful
+    ("missing-source reason with historical context", [], "mock_good.json",
+     lambda d: [r.update(reason="data/wave2_followup.csv is missing from this "
+                                "checkout; it was present in the archived v1 snapshot")
+                for r in d["values"]
+                if r.get("classification") == "unverifiable"], 0),
     # a negated wrapper around the manuscript value denies the claim it
     # pairs on
     ("reported value negated", [], "mock_good.json",

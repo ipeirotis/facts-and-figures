@@ -55,15 +55,33 @@ NEG_ABSENCE_RE = re.compile(
     r"\b(?:not|no longer|no|never|isn.?t|wasn.?t|aren.?t|weren.?t)\s+"
     r"(?:missing|unavailable|unreachable|absent|removed)\b")
 
-# a reason crediting the gate or pipeline with success — or asserting
-# that its blocking source was present, available, or verified —
-# contradicts the unverifiable classification it sits on, whatever
-# vocabulary it also carries. Adjacency keeps negations safe: "the gate
-# never passed" and "is not present" do not match
+# a reason crediting the gate or pipeline with success contradicts the
+# unverifiable classification it sits on, whatever vocabulary it also
+# carries. Adjacency keeps negations safe: "the gate never passed" does
+# not match
 GATE_SUCCESS_RE = re.compile(
     r"\b(?:gate|pipeline|run|computation|check)s?\s+(?:succeeded|passed)\b"
-    r"|\bvalue\s+is\s+valid\b"
-    r"|\b(?:is|are|was|were|remains?)\s+(?:present|available|verified|intact)\b")
+    r"|\bvalue\s+is\s+valid\b")
+
+# an affirmative presence claim disqualifies a reason ONLY when the
+# reason asserts no absence at all: "is present and verified" alone is
+# the contradiction, while "is missing from this checkout; it was
+# present in the archived v1 snapshot" is truthful historical context
+PRESENCE_RE = re.compile(
+    r"\b(?:is|are|was|were|remains?)\s+(?:present|available|verified|intact)\b")
+ABSENCE_WORD_RE = re.compile(
+    r"missing|not found|unavailable|unreachable|absent|removed"
+    r"|not distributed|did not run|never ran|could not|no such")
+
+
+def reason_denies(reason):
+    """True when a reason contradicts the unverifiable classification it
+    sits on: it denies the absence, credits the run with success, or
+    claims presence without asserting any absence."""
+    if NEG_ABSENCE_RE.search(reason) or GATE_SUCCESS_RE.search(reason):
+        return True
+    return bool(PRESENCE_RE.search(reason)
+                and not ABSENCE_WORD_RE.search(NEG_ABSENCE_RE.sub(" ", reason)))
 TOP_REQUIRED = ("schema", "skill_version", "manuscript_files", "pipeline_command",
                 "environment", "data_versions", "values")
 
@@ -362,8 +380,7 @@ def grade_targets(report, expected):
             # contradicts the unverifiable classification it sits on,
             # whichever file it also names
             denying = [str(r.get("reason"))[:60] for r in recs
-                       if NEG_ABSENCE_RE.search(str(r.get("reason", "")).lower())
-                       or GATE_SUCCESS_RE.search(str(r.get("reason", "")).lower())]
+                       if reason_denies(str(r.get("reason", "")).lower())]
             g.check(not denying, f"{t['id']}: no reason denies the absence",
                     f"reasons: {denying}" if denying else "")
             must = t.get("reason_must_contain", "").lower()
@@ -481,8 +498,7 @@ def grade_gate(report, expected):
     # missing" and "gate passed for workers.csv" would otherwise pass on
     # the basename alone
     bad_reasons = [str(r.get("reason"))[:60] for r in values
-                   if NEG_ABSENCE_RE.search(str(r.get("reason", "")).lower())
-                   or GATE_SUCCESS_RE.search(str(r.get("reason", "")).lower())
+                   if reason_denies(str(r.get("reason", "")).lower())
                    or (not any(w in str(r.get("reason", "")).lower() for w in gate_words)
                        and not any(n.split("/")[-1] in str(r.get("reason", "")).lower()
                                    for n in removed))]
