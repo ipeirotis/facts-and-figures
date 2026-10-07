@@ -125,6 +125,12 @@ def grade_top_level(g, report, expected):
            if any(not str(r.get(k) or "").strip() for k in RECORD_REQUIRED)]
     g.check(not bad, "required record fields present and non-empty",
             f"records with missing or empty fields: {bad}" if bad else f"{len(values)} records")
+    # the schema requires `reported` to carry the manuscript text verbatim,
+    # so it must be a string — a JSON number loses the formatting consumers
+    # rely on for display and traceability
+    non_str = [i for i, r in enumerate(values) if not isinstance(r.get("reported"), str)]
+    g.check(not non_str, "reported is a verbatim string on every record",
+            f"records with non-string reported: {non_str}" if non_str else "")
     # a location must at least name a place in the manuscript — a filler
     # string cannot support the promised value-by-value review
     place_tokens = ("manuscript", "abstract", "data", "results", "method",

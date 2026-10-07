@@ -44,6 +44,9 @@ jobs:
         if: steps.key.outputs.present == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # keep the key out of the Bash commands the eval pre-approves;
+          # Claude Code retains it for its own API calls
+          CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
         run: evals/run_agent_eval.sh "$RUNNER_TEMP/fnf-eval"
       - name: upload reports
         if: always() && steps.key.outputs.present == 'true'

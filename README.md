@@ -125,6 +125,12 @@ jobs:
         shell: bash
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # strip the key from the pipeline's environment: the pre-approved
+          # Bash commands run the repository's own analysis code, which has
+          # no business reading API credentials. Claude Code keeps the key
+          # for its own API calls. Drop only if your pipeline itself needs
+          # scrubbed credentials.
+          CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
         run: |
           claude -p "Using the facts-and-figures skill installed under .claude/skills/, verify every number reported in the manuscript against this repository's analysis pipeline. Produce the skill's full four-section report." \
             --permission-mode acceptEdits --allowedTools Bash | tee verification-report.md

@@ -12,8 +12,8 @@
 # the hook guards it; the FACTS_AND_FIGURES_OUT environment variable is
 # honored as a fallback for launches configured that way. A proposal
 # directory that equals or contains the project is rejected — it would
-# whitelist the author's tree — as is a scratch root that is not fully
-# disjoint from the project.
+# whitelist the author's tree — as is one reached through a symlink and a
+# scratch root that is not fully disjoint from the project.
 #
 # The payload is parsed straight from stdin: a Write payload carries the
 # whole file content, and routing it through an environment variable or an
@@ -47,10 +47,13 @@ if tool not in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
 
 project = os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd") or os.getcwd()
 project = os.path.realpath(project)
-default_dir = os.path.realpath(os.path.join(project, "facts-and-figures-out"))
-marker = os.path.join(default_dir, ".active")
+marker = os.path.join(project, "facts-and-figures-out", ".active")
 
-if not os.path.exists(marker):
+# lexists: a marker that is a broken symlink still arms the guard — with
+# exists() a dangling link would read as absent, the hook would go inert,
+# and the write that recreates the marker could follow the link to create
+# an author file outside the proposal directory
+if not os.path.lexists(marker):
     sys.exit(0)
 
 try:
@@ -59,7 +62,8 @@ try:
 except Exception:
     named = ""
 out_dir = named or os.environ.get("FACTS_AND_FIGURES_OUT", "") or "facts-and-figures-out"
-proposal = os.path.realpath(os.path.join(project, out_dir))
+proposal_lexical = os.path.normpath(os.path.join(project, out_dir))
+proposal = os.path.realpath(proposal_lexical)
 
 tool_input = payload.get("tool_input") or {}
 target = tool_input.get("file_path") or tool_input.get("notebook_path")
@@ -81,6 +85,12 @@ def safe_root(cand):
     return cand != project and not under(project, cand)
 
 
+# the proposal allowance must also resolve to its own lexical path: a
+# proposal root that is itself a symlink (facts-and-figures-out -> data)
+# would launder every generated file into the author directory it points
+# at, with safe_root none the wiser
+proposal_safe = safe_root(proposal) and proposal == proposal_lexical
+
 scratch_roots = []
 for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
     if not scratch:
@@ -93,10 +103,11 @@ for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
         continue
     scratch_roots.append(root)
 
-if lexical == marker and not os.path.islink(marker):
-    # lifecycle writes to the marker itself are allowed — but only when it
-    # is a regular file: a marker replaced by a symlink to an author file
-    # would otherwise be overwritten through this very exemption
+if lexical == marker and os.path.realpath(marker) == marker:
+    # lifecycle writes to the marker itself are allowed — but only when
+    # the marker path resolves to itself: a marker replaced by a symlink,
+    # or reached through a symlinked proposal root, would otherwise route
+    # this very exemption onto an author file
     sys.exit(0)
 
 if under(lexical, project):
@@ -106,10 +117,10 @@ if under(lexical, project):
     # RESOLVE inside the proposal directory, or a symlink planted there
     # (facts-and-figures-out/escape -> ../manuscript.md) escapes the
     # boundary from within
-    if safe_root(proposal) and under(resolved, proposal):
+    if proposal_safe and under(resolved, proposal):
         sys.exit(0)
 else:
-    allowed = ([proposal] if safe_root(proposal) else []) + scratch_roots
+    allowed = ([proposal] if proposal_safe else []) + scratch_roots
     for root in allowed:
         if under(resolved, root):
             sys.exit(0)

@@ -59,16 +59,13 @@ JSON
 
 # hash every workspace file outside the proposal directory, including the
 # .claude configuration and installed skill (a run that tampers with its
-# own guard must fail), and record every entry's type and symlink target,
-# so a run that plants a symlink, FIFO, or directory in the author's tree
-# fails the eval behaviorally, not just on paper; modes are recorded so
-# a chmod of an author file is a detected modification
+# own guard must fail), and record every entry's type, mode, and symlink
+# target, so a run that plants a symlink, FIFO, or directory in the
+# author's tree, or chmods an author file, fails the eval behaviorally,
+# not just on paper. Implemented in Python: GNU find -printf and sha256sum
+# are missing from stock macOS, and python3 is already required for grading.
 snapshot() {
-    (cd "$1" \
-        && find . -path ./facts-and-figures-out -prune -o -type f -print0 \
-            | sort -z | xargs -0 -r sha256sum \
-        && find . -path ./facts-and-figures-out -prune -o -printf '%y %m %p -> %l\n' \
-            | sort)
+    python3 "$EVALS_DIR/snapshot_workspace.py" "$1"
 }
 
 workspace_clean() {
@@ -133,14 +130,27 @@ echo "workspaces prepared under $WORK"
 
 # Headless runs cannot answer permission prompts, so Bash is pre-approved:
 # the workspace is scratch, the fixture synthetic, and the write-boundary
-# hook still guards file edits. acceptEdits covers the run marker.
+# hook still guards file edits. acceptEdits covers the run marker. The
+# subprocess environment scrub keeps ANTHROPIC_API_KEY out of the Bash
+# commands the pre-approval lets the agent run.
 CLAUDE_ARGS=(--permission-mode acceptEdits --allowedTools Bash)
+export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1
 
 if command -v claude >/dev/null 2>&1; then
+    # the process being measured must not be able to read its own answer
+    # key: the workspaces never receive evals/, and while the agent runs
+    # this directory is closed off entirely (restored even if a run dies).
+    # Root bypasses permission bits; CI runners and ordinary local users
+    # do not.
+    restore_evals() { chmod 755 "$EVALS_DIR"; }
+    trap restore_evals EXIT
+    chmod 000 "$EVALS_DIR"
     echo "== running verification case =="
     (cd "$WORK/verify" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/verify-report.md"
     echo "== running gate case =="
     (cd "$WORK/gated" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/gated-report.md"
+    restore_evals
+    trap - EXIT
     grade_all
     exit "$?"
 else

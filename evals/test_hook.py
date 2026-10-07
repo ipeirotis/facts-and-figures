@@ -136,6 +136,35 @@ def main():
               write_payload(proj, marker), proj, want_deny=False)
         marker.write_text("")
 
+        # the proposal root itself must not be a symlink into the author
+        # tree: a redirected root would launder every generated file into
+        # the directory it points at
+        sproj = Path(home_base) / "paper2"
+        (sproj / "data").mkdir(parents=True)
+        (sproj / "data" / ".active").touch()
+        (sproj / "facts-and-figures-out").symlink_to(sproj / "data")
+        check("symlinked proposal root: write under it denied",
+              write_payload(sproj, sproj / "facts-and-figures-out" / "s.py"), sproj,
+              want_deny=True)
+        check("symlinked proposal root: marker-path write exemption refused",
+              write_payload(sproj, sproj / "facts-and-figures-out" / ".active"), sproj,
+              want_deny=True)
+
+        # a broken marker symlink must still arm the guard: with exists()
+        # it would read as absent and the write recreating the marker could
+        # follow the link to create an author file
+        bproj = Path(home_base) / "paper3"
+        (bproj / "facts-and-figures-out").mkdir(parents=True)
+        (bproj / "facts-and-figures-out" / ".active").symlink_to(bproj / "planted.md")
+        check("broken marker symlink: guard armed, outside write denied",
+              write_payload(bproj, bproj / "notes.md"), bproj, want_deny=True)
+        check("broken marker symlink: write to the marker path denied",
+              write_payload(bproj, bproj / "facts-and-figures-out" / ".active"), bproj,
+              want_deny=True)
+        check("broken marker symlink: proposal-directory write still allowed",
+              write_payload(bproj, bproj / "facts-and-figures-out" / "s.py"), bproj,
+              want_deny=False)
+
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)
         check("TMPDIR inside project: data write still denied",
