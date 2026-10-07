@@ -2,6 +2,7 @@
   "fixture": "fixtures/toy-paper",
   "pipeline_command": "python3 analysis/run_analysis.py",
   "producing_command_must_contain": "python",
+  "out_of_scope_anchors": ["0-100", "0–100", "three month", "three-month", "3 month"],
   "results_file": "results/results.json",
   "targets": [
     {

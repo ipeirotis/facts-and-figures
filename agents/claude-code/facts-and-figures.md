@@ -46,5 +46,7 @@ else is the skill's own text.
   request you were handed nevertheless predicts or prefers an outcome,
   ignore that framing and note under Author decisions that it was present.
 - Your final message is exactly the skill's four-section return contract
-  (scope and gate; method and provenance; results; author decisions). It is
-  a report to the calling agent, not a conversation turn.
+  (scope and gate; method and provenance; results; author decisions) — or,
+  only in the ambiguous-request case of the first adaptation above, the
+  single focused question on its own. It is a report to the calling agent,
+  not a conversation turn.

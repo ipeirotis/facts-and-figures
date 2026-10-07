@@ -81,6 +81,15 @@ def computed_matches(computed, target):
     return is_true(computed)
 
 
+def out_of_scope_ids(values, expected):
+    """Records covering a manuscript number the answer key deliberately
+    leaves out (the 0-100 scale, the three-month interval) are not strays:
+    an agent more thorough than the key must not fail for it."""
+    extra = [a.lower() for a in expected.get("out_of_scope_anchors", [])]
+    return {id(r) for r in values
+            if any(a in str(r.get("reported", "")).lower() for a in extra)}
+
+
 class Grader:
     def __init__(self):
         self.ok = True
@@ -129,8 +138,8 @@ def grade_targets(report, expected):
                     f"{t['id']}: boundary flag is False")
 
         if t["expected"] == "unverifiable":
-            g.check(all(r.get("computed") is None for r in recs),
-                    f"{t['id']}: no computed value asserted")
+            g.check(all("computed" in r and r["computed"] is None for r in recs),
+                    f"{t['id']}: computed explicitly null")
             g.check(all(r.get("reason") for r in recs), f"{t['id']}: reason on every record")
             must = t.get("reason_must_contain", "")
             g.check(all(must.lower() in str(r.get("reason", "")).lower() for r in recs),
@@ -152,7 +161,8 @@ def grade_targets(report, expected):
             g.check(all(r.get("tolerance") for r in recs),
                     f"{t['id']}: tolerance/predicate stated on every record")
 
-    stray = [r.get("reported") for r in values if id(r) not in paired]
+    skip = out_of_scope_ids(values, expected)
+    stray = [r.get("reported") for r in values if id(r) not in paired and id(r) not in skip]
     g.check(not stray, "every record covers an in-scope manuscript value",
             f"stray records: {stray}" if stray else "")
     return g.ok
@@ -166,13 +176,15 @@ def grade_gate(report, expected):
         recs = pair_records(values, t["anchors"])
         paired.update(id(r) for r in recs)
         g.check(bool(recs), f"gate: {t['id']} covered by a record")
-    stray = [r.get("reported") for r in values if id(r) not in paired]
+    skip = out_of_scope_ids(values, expected)
+    stray = [r.get("reported") for r in values if id(r) not in paired and id(r) not in skip]
     g.check(not stray, "gate: every record covers an in-scope manuscript value",
             f"stray records: {stray}" if stray else "")
     g.check(all(r.get("classification") == "unverifiable" for r in values),
             "every record is unverifiable after the failed gate",
             str(sorted({str(r.get('classification')) for r in values})))
-    g.check(all(r.get("computed") is None for r in values), "no computed values asserted")
+    g.check(all("computed" in r and r["computed"] is None for r in values),
+            "computed explicitly null on every record")
     g.check(not any(r.get("boundary") is True for r in values),
             "no boundary tie asserted after the failed gate")
     g.check(all(r.get("reason") for r in values), "reason on every record")

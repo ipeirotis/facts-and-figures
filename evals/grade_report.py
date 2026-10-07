@@ -37,15 +37,17 @@ SECTIONS = ("scope and gate", "method and provenance", "results", "author decisi
 
 
 def grade_sections(report):
-    """The skill's return contract names four sections; a report missing one
-    dropped part of the contract (typically provenance or the gate)."""
+    """The skill's return contract names four sections, which must appear as
+    actual headings (markdown #, bold, or numbered), not merely be mentioned
+    in a sentence — a report saying the sections were omitted must fail."""
     ok = True
-    low = report.lower()
     for s in SECTIONS:
-        if s in low:
+        rx = re.compile(r"(?mi)^\s*(?:#{1,6}|\*\*|\d+\.)\s*(?:\d+\.\s*)?(?:\*\*)?\s*"
+                        + re.escape(s) + r"\b")
+        if rx.search(report):
             print(f"PASS  section present: {s}")
         else:
-            print(f"FAIL  section missing: {s}")
+            print(f"FAIL  section heading missing: {s}")
             ok = False
     return ok
 
