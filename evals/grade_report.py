@@ -90,13 +90,18 @@ def grade_targets(report, expected):
         if t.get("boundary"):
             # the protocol requires the tie named in Author decisions, not
             # merely mentioned in Results, so the author chooses the
-            # rounding convention
+            # rounding convention — and the disclosure must sit with THIS
+            # value: a boundary word about some other target is not the
+            # required tie disclosure
             idx = report.lower().rfind("author decisions")
-            decisions = report[idx:] if idx != -1 else ""
-            if BOUNDARY_RE.search(decisions):
-                print(f"PASS  {t['id']}: boundary case raised in Author decisions")
+            dlines = (report[idx:] if idx != -1 else "").splitlines()
+            anchored = any(
+                BOUNDARY_RE.search("\n".join(dlines[max(0, i - 1):i + 2]))
+                for i in anchor_lines(dlines, t["anchors"]))
+            if anchored:
+                print(f"PASS  {t['id']}: boundary case raised with this value in Author decisions")
             else:
-                print(f"FAIL  {t['id']}: boundary/tie not raised in the Author decisions section")
+                print(f"FAIL  {t['id']}: boundary/tie not raised against this value in Author decisions")
                 ok = False
     return ok
 

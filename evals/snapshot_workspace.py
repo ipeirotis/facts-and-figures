@@ -57,10 +57,13 @@ def main():
     hashes, inventory = [], []
     for dirpath, dirnames, filenames in os.walk(root, onerror=fail):
         if dirpath == root:
-            # prune the proposal directory at the top level only, whatever
-            # filesystem object carries its name
-            dirnames[:] = [d for d in dirnames if d != PRUNE]
-            filenames = [f for f in filenames if f != PRUNE]
+            # prune only a REAL proposal directory at the top level: a
+            # symlink, file, or FIFO carrying the proposal name is not the
+            # proposal directory and stays in the inventory — pruning it
+            # would hide a run that replaced the root with a symlink and
+            # routed generated work outside it
+            dirnames[:] = [d for d in dirnames
+                           if d != PRUNE or os.path.islink(os.path.join(dirpath, d))]
         dirnames.sort()
         rel_dir = os.path.relpath(dirpath, root)
         entries = [dirpath] if rel_dir == "." else []

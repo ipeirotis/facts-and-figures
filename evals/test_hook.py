@@ -77,6 +77,9 @@ def main():
               write_payload(proj, proj / "manuscript.md"), proj, want_deny=True)
         check("marker: proposal-directory write allowed",
               write_payload(proj, proj / "facts-and-figures-out" / "s.py"), proj, want_deny=False)
+        check("marker: mid-run marker rewrite denied",
+              write_payload(proj, proj / "facts-and-figures-out" / ".active"), proj,
+              want_deny=True)
         check("marker: scratch write under /tmp allowed",
               write_payload(proj, "/tmp/fnf-scratch.txt"), proj, want_deny=False)
         check("marker: Bash payload ignored",
@@ -132,8 +135,10 @@ def main():
               write_payload(proj, proj / "manuscript.md"), proj, want_deny=True)
         check("marker naming custom-out: default-directory write denied",
               write_payload(proj, proj / "facts-and-figures-out" / "r.json"), proj, want_deny=True)
-        check("marker naming custom-out: the marker file itself stays writable",
-              write_payload(proj, marker), proj, want_deny=False)
+        # the armed marker is read-only to guarded tools: a rewrite would
+        # re-aim the boundary at any directory the writer names
+        check("marker naming custom-out: mid-run marker rewrite denied",
+              write_payload(proj, marker), proj, want_deny=True)
         marker.write_text("")
 
         # the proposal root itself must not be a symlink into the author

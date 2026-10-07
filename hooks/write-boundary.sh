@@ -137,12 +137,20 @@ for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
         continue
     scratch_roots.append(root)
 
-if lexical == marker and os.path.realpath(marker) == marker and not multi_linked(marker):
-    # lifecycle writes to the marker itself are allowed — but only when
-    # the marker path resolves to itself: a marker replaced by a symlink,
-    # or reached through a symlinked proposal root, would otherwise route
-    # this very exemption onto an author file
-    sys.exit(0)
+if lexical == marker:
+    # the marker is read-only while a run is armed: it is created before
+    # the first command, carrying any custom proposal directory as its
+    # single line (the unarmed branch above validates that write), and it
+    # is removed with the run at teardown. A guarded tool rewriting it
+    # mid-run would re-aim the write boundary itself — name data as the
+    # proposal directory, then edit the dataset through the very tools
+    # this hook guards
+    deny(
+        "facts-and-figures write boundary: the run marker {m} is read-only while "
+        "a run is active. It is created before the first command and removed at "
+        "teardown; a different proposal directory is named at creation, not by "
+        "rewriting the marker mid-run.".format(m=marker)
+    )
 
 if under(lexical, project):
     # a path addressed inside the repository is judged as addressed: a

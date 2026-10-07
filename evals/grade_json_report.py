@@ -232,6 +232,13 @@ def grade_gate(report, expected):
         recs = pair_records(values, t["anchors"])
         paired.update(id(r) for r in recs)
         g.check(bool(recs), f"gate: {t['id']} covered by a record")
+    # the schema requires one record per manuscript value, and after a
+    # failed gate every record shares the same classification and null
+    # computed value — so one record concatenating every anchor would
+    # otherwise satisfy all ten coverage checks at once
+    g.check(len(paired) >= len(expected["targets"]),
+            "gate: distinct records cover the targets",
+            f"{len(paired)} distinct paired records for {len(expected['targets'])} targets")
     skip = out_of_scope_ids(values, expected)
     stray = [r.get("reported") for r in values if id(r) not in paired and id(r) not in skip]
     g.check(not stray, "gate: every record covers an in-scope manuscript value",

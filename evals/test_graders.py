@@ -39,6 +39,15 @@ def _numeric_reported(d):
             r["reported"] = 10000
 
 
+def _collapsed_gate(d):
+    """One record whose reported string concatenates every anchor must not
+    satisfy ten per-value coverage checks: the schema requires one record
+    per manuscript value."""
+    merged = dict(d["values"][0])
+    merged["reported"] = "; ".join(str(r.get("reported", "")) for r in d["values"])
+    d["values"] = [merged]
+
+
 def _renamed_data_key(d):
     """A legitimate alternative spelling of the hashed input's path must
     still pass: the schema requires the actual path, not one dictionary
@@ -58,7 +67,31 @@ MUTATIONS = [
     ("presence claimed for removed input", ["--gate"], "mock_gate.json",
      lambda d: d["data_versions"].update({"data/workers.csv": "present and verified"}), 1),
     ("./-prefixed data_versions key", [], "mock_good.json", _renamed_data_key, 0),
+    ("all anchors collapsed into one record", ["--gate"], "mock_gate.json",
+     _collapsed_gate, 1),
 ]
+
+
+def md_boundary_case():
+    """A boundary word about a different value in Author decisions must not
+    satisfy the tie disclosure for the flagged share."""
+    text = (TESTS / "mock_good.md").read_text()
+    original = ("The flagged share sits exactly on the rounding boundary; "
+                "confirm the intended convention.")
+    mutated = text.replace(
+        original, "There are no boundary concerns for the overall mean 71.48.")
+    assert mutated != text, "mock_good.md boundary line changed; update this test"
+    f = tempfile.NamedTemporaryFile("w", suffix=".md", delete=False)
+    f.write(mutated)
+    f.close()
+    proc = run_grader("grade_report.py", [], Path(f.name))
+    Path(f.name).unlink()
+    ok = proc.returncode == 1
+    print(f"{'PASS' if ok else 'FAIL'}  grade_report.py mock_good.md with misdirected boundary: "
+          f"exit {proc.returncode}, want 1")
+    if not ok:
+        print(proc.stdout)
+    return ok
 
 
 def prepared(mock, mutate=None):
@@ -107,6 +140,8 @@ def main():
         if not ok:
             print(proc.stdout)
             failures += 1
+    if not md_boundary_case():
+        failures += 1
     print()
     if failures:
         print(f"{failures} grader self-test(s) FAILED")
