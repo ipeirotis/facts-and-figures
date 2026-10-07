@@ -177,8 +177,10 @@ def grade_top_level(g, report, expected):
     # group split in Results where the key names Data
     place_tokens = ("abstract", "data", "results", "method", "table", "figure",
                     "introduction", "discussion", "appendix", "conclusion")
+    # whole-token matching: "metadata" contains "data" but locates nothing
     bad_locs = [r.get("location") for r in values
-                if not any(tok in str(r.get("location", "")).lower() for tok in place_tokens)]
+                if not any(re.search(r"\b" + tok, str(r.get("location", "")).lower())
+                           for tok in place_tokens)]
     g.check(not bad_locs, "record locations identify a manuscript place",
             f"unusable locations: {bad_locs[:3]}" if bad_locs else "")
     return values
@@ -325,6 +327,21 @@ def grade_gate(report, expected):
     g.check(not any(r.get("boundary") is True for r in values),
             "no boundary tie asserted after the failed gate")
     g.check(all(r.get("reason") for r in values), "reason on every record")
+    # each reason must actually explain an absence or the failed gate —
+    # "the pipeline succeeded and this value is valid" contradicts the
+    # unverifiable classification it sits on. A record may cite its own
+    # missing source (the undistributed wave-2 file) rather than the
+    # removed input, so absence vocabulary or the removed name both count
+    gate_words = ("gate", "missing", "not found", "unavailable", "unreachable",
+                  "absent", "removed", "not distributed", "did not run",
+                  "never ran", "could not")
+    removed = [norm_path(n).lower() for n in expected["gate_case"]["remove"]]
+    bad_reasons = [str(r.get("reason"))[:60] for r in values
+                   if not any(w in str(r.get("reason", "")).lower() for w in gate_words)
+                   and not any(n.split("/")[-1] in str(r.get("reason", "")).lower()
+                               for n in removed)]
+    g.check(not bad_reasons, "every reason explains an absence or the failed gate",
+            f"reasons: {bad_reasons[:2]}" if bad_reasons else "")
     # provenance for the removed input must record its absence — the
     # schema requires it where there is nothing to hash. Asserting a
     # digest is a planted claim, and so is any entry that does not state

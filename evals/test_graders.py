@@ -124,6 +124,11 @@ MUTATIONS = [
     ("seed exiled from provenance to a note", [], "mock_good.json",
      lambda d: (d.update(environment="Python 3.11.15, stdlib only"),
                 d["values"][0].update(note="the run used seed 20260816")), 1),
+    ("locations reduced to the word metadata", [], "mock_good.json",
+     lambda d: [r.update(location="metadata") for r in d["values"]], 1),
+    ("gate reasons claiming the pipeline succeeded", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="the pipeline succeeded and this value is valid")
+                for r in d["values"]], 1),
 ]
 
 
@@ -172,6 +177,14 @@ MD_MUTATIONS = [
     ("negated verdict sentence appended", "mock_gate.md", ["--gate"],
      lambda t: t + "\nThe reported 40 workers value is unverifiable, "
                    "not a match or mismatch after the failed gate.\n", 0),
+    # moving a comparison out of Results leaves the contract unmet even
+    # though the anchor still appears elsewhere in the report
+    ("mismatch comparison moved out of Results", "mock_good.md", [],
+     lambda t: t.replace(
+         "- Difference of means: manuscript reports 6.23, pipeline gives 6.32 -> mismatch. Likely digit transposition.",
+         "- One comparison is recorded in the appendix instead.")
+     + "\nAppendix: the difference of means, manuscript 6.23 versus pipeline 6.32, "
+       "is a mismatch (likely digit transposition).\n", 1),
 ]
 
 

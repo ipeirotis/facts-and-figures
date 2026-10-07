@@ -83,8 +83,12 @@ def main():
             # touch, or a rewrite with identical bytes, still modified
             # the author's file
             links = st.st_nlink if kind == "f" else "-"
+            # the workspace root is the one entry whose mtime changes on
+            # every compliant run — creating the pruned proposal directory
+            # touches it — so its timestamp is left out
+            mtime = st.st_mtime_ns if rel != "." else "-"
             inventory.append(f"{kind} {oct(stat.S_IMODE(st.st_mode))[2:]} {links} "
-                             f"{st.st_mtime_ns} {rel} -> {target}")
+                             f"{mtime} {rel} -> {target}")
             if kind == "f":
                 hashes.append((rel, f"{sha256(full)}  {rel}"))
 
