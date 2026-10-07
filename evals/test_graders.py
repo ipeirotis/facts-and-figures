@@ -359,6 +359,26 @@ MUTATIONS = [
      lambda d: [r.update(reason="data/wave2_followup.csv is not distributed; "
                                 "nothing was computed")
                 for r in d["values"] if r.get("reported") == "64%"], 0),
+    # a trailing continuation is a different file too: the stem must be
+    # bounded on BOTH sides, not only against prefix lookalikes
+    ("missing-source reason citing a suffix lookalike", [], "mock_good.json",
+     lambda d: [r.update(reason="data/wave2_followup-old.csv is not distributed")
+                for r in d["values"]
+                if r.get("classification") == "unverifiable"], 1),
+    ("gate wave-2 reason citing a suffix lookalike", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="data/wave2_followup-old.csv is missing")
+                for r in d["values"] if r.get("reported") == "64%"], 1),
+    # ...while a sentence-final period after the real filename is prose,
+    # not a filename continuation
+    ("missing-source reason ending at the filename", [], "mock_good.json",
+     lambda d: [r.update(reason="the pipeline could not read "
+                                "data/wave2_followup.csv.")
+                for r in d["values"]
+                if r.get("classification") == "unverifiable"], 0),
+    # a section token inside a filename is a file, not a section: a
+    # location of nonexistent documents certifies no traceability
+    ("locations replaced by section-named files", [], "mock_good.json",
+     lambda d: [r.update(location="results.md") for r in d["values"]], 1),
 ]
 
 

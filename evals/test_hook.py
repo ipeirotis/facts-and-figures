@@ -500,6 +500,30 @@ def main():
             finally:
                 (p8 / "sealed-out").chmod(0o755)
 
+        # a planted PLAIN REGULAR marker naming an author directory — the
+        # one planted form the symlink and hard-link checks cannot see —
+        # must not re-aim the allowance: the dataset predates the marker,
+        # which a fresh proposal directory never does
+        p11 = Path(home_base) / "paper11"
+        (p11 / "data").mkdir(parents=True)
+        (p11 / "data" / "workers.csv").write_text("id\n1\n")
+        (p11 / "facts-and-figures-out").mkdir()
+        (p11 / "facts-and-figures-out" / ".active").write_text("data\n")
+        check("planted marker naming data: dataset overwrite denied",
+              write_payload(p11, p11 / "data" / "workers.csv"), p11, want_deny=True)
+        check("planted marker naming data: new file under data denied",
+              write_payload(p11, p11 / "data" / "x.csv"), p11, want_deny=True)
+
+        # ...while the legitimate lifecycle — marker first, proposal
+        # files after it — keeps a filling custom directory writable
+        p12 = Path(home_base) / "paper12"
+        (p12 / "facts-and-figures-out").mkdir(parents=True)
+        (p12 / "custom12").mkdir()
+        (p12 / "facts-and-figures-out" / ".active").write_text("custom12\n")
+        (p12 / "custom12" / "report.md").write_text("draft\n")
+        check("custom dir filled after its marker: further writes allowed",
+              write_payload(p12, p12 / "custom12" / "s.py"), p12, want_deny=False)
+
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)
         check("TMPDIR inside project: data write still denied",

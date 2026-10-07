@@ -83,20 +83,27 @@ EXPLAINS_RE = re.compile(
     + r"|\bfail(?:s|ed|ure)?\b|\bcannot\b|\bcan.?t\b|\bunable\b|\berror(?:s|ed)?\b")
 
 
+# a name match must END with the token too: "-old", "_v2" and a second
+# extension are filename continuations naming a DIFFERENT file, while a
+# sentence-final period after the name is ordinary prose and must pass
+NAME_END = r"(?![\w-])(?!\.[a-z0-9])"
+
+
 def names_file(name, text):
     """Bounded filename match: the basename of NAME appears in TEXT as
-    its own token, not inside a longer filename — notworkers.csv does
-    not name workers.csv."""
+    its own token, not inside a longer filename — neither notworkers.csv
+    nor workers.csv.bak names workers.csv."""
     base = re.escape(name.split("/")[-1].lower())
-    return bool(re.search(r"(?<![\w.-])" + base + r"(?!\w)", text))
+    return bool(re.search(r"(?<![\w.-])" + base + NAME_END, text))
 
 
 def names_stem(stem, text):
     """Bounded source-stem match, the one definition both grading paths
-    use: the keyed stem appears as its own token, not inside a longer
-    filename — not_wave2_followup.csv does not name wave2_followup."""
-    return bool(re.search(r"(?<![\w.-])" + re.escape(stem.lower()) + r"(?!\w)",
-                          text))
+    use: the keyed stem appears as its own token, optionally with one
+    file extension — neither not_wave2_followup.csv (a prefix) nor
+    wave2_followup-old.csv (a suffix) names wave2_followup."""
+    return bool(re.search(r"(?<![\w.-])" + re.escape(stem.lower())
+                          + r"(?:\.[a-z0-9]{1,8})?" + NAME_END, text))
 
 
 def reason_denies(reason, sources=()):
@@ -171,8 +178,12 @@ def check_location_sections(g, t, recs, known):
     bad = []
     for r in recs:
         loc = str(r.get("location", "")).lower()
+        # a section token inside a filename is a file, not a section:
+        # "results.md" names a nonexistent document, never the Results
+        # section, so a filename continuation disqualifies the token
         named = {s for s in known
-                 if re.search(r"(?<!\w)" + re.escape(s) + r"(?!\w)", loc)}
+                 if re.search(r"(?<!\w)" + re.escape(s) + r"(?!\w)(?!\.[a-z0-9])",
+                              loc)}
         if not named or not named <= secs:
             bad.append(str(r.get("location"))[:40])
     g.check(not bad, f"{t['id']}: location names a section carrying this value",
@@ -330,9 +341,10 @@ def grade_top_level(g, report, expected):
                     "introduction", "discussion", "appendix", "conclusion")
     # whole-token matching, bounded on both sides with plurals allowed:
     # "metadata" contains "data" and "database" starts with it, yet
-    # neither locates a manuscript section
+    # neither locates a manuscript section — and a token continuing as
+    # a filename ("results.md") is a file reference, not a place
     bad_locs = [r.get("location") for r in values
-                if not any(re.search(r"\b" + tok + r"(?:e?s)?\b",
+                if not any(re.search(r"\b" + tok + r"(?:e?s)?\b(?!\.[a-z0-9])",
                                      str(r.get("location", "")).lower())
                            for tok in place_tokens)]
     g.check(not bad_locs, "record locations identify a manuscript place",

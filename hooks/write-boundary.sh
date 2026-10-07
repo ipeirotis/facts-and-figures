@@ -303,6 +303,35 @@ if lexical == marker or resolved == marker:
         "rewriting the marker mid-run.".format(m=marker)
     )
 
+# a custom-named proposal directory holding anything OLDER than the marker
+# is stale or planted: the bootstrap only ever blesses a fresh directory,
+# and a run creates its marker before every file it writes there, so
+# pre-existing content behind the name means a plain regular marker —
+# the one planted form the link checks above cannot see — was aimed at
+# author files (content line "data" re-aiming the allowance at the
+# dataset). Compared by inode change time, which userland cannot
+# backdate; an unlistable directory counts as stale, matching the
+# bootstrap; the default directory is exempt because its kept companion
+# from an earlier run legitimately predates a new marker
+default_proposal = os.path.realpath(os.path.join(project, "facts-and-figures-out"))
+if named and proposal != default_proposal and os.path.isdir(proposal):
+    stale = False
+    try:
+        for e in os.listdir(proposal):
+            if os.lstat(os.path.join(proposal, e)).st_ctime_ns < marker_st.st_ctime_ns:
+                stale = True
+                break
+    except OSError:
+        stale = True
+    if stale:
+        deny(
+            "facts-and-figures write boundary: the run marker names {d} as the "
+            "proposal directory, but that directory holds content older than the "
+            "marker itself. A proposal directory starts fresh and fills only after "
+            "its marker exists, so this marker is stale or planted; remove {m} and "
+            "start the run again.".format(d=proposal, m=marker)
+        )
+
 # the one allowance: a write that RESOLVES inside a safe proposal
 # directory. Judging the resolved path defeats symlinks in either
 # direction (a repo path leading out, a proposal path leading back in),

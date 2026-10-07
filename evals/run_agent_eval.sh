@@ -202,6 +202,14 @@ if command -v claude >/dev/null 2>&1; then
             if [ "$dup" = 0 ] && [ -d "$d" ]; then LOCK_DIRS+=("$d"); fi
         done
     fi
+    # the repository ROOT is locked too, last so its children above are
+    # still reachable when their modes are taken and set: CHANGELOG.md
+    # and the other root-level docs name the planted answers outright,
+    # and evals/ alone left them readable to a measured agent that
+    # learned the checkout path. The script itself keeps running from
+    # its already-open file descriptor, and the graders only run after
+    # restore_key reopens everything
+    LOCK_DIRS+=("$SKILL_DIR")
     for d in "${LOCK_DIRS[@]}"; do LOCK_MODES+=("$(dir_mode "$d")"); done
     restore_key() {
         # reverse order: a parent (the common dir) must be reopened
@@ -213,10 +221,14 @@ if command -v claude >/dev/null 2>&1; then
     }
     trap restore_key EXIT
     for d in "${LOCK_DIRS[@]}"; do chmod 000 "$d"; done
+    # OLDPWD is scrubbed from the measured environment: the subshell cd
+    # sets it to the directory this script was invoked from — typically
+    # this checkout — handing the agent a signpost to the answer key the
+    # lockout exists to hide
     echo "== running verification case =="
-    (cd "$WORK/verify" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/verify-report.md"
+    (cd "$WORK/verify" && env -u OLDPWD claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/verify-report.md"
     echo "== running gate case =="
-    (cd "$WORK/gated" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/gated-report.md"
+    (cd "$WORK/gated" && env -u OLDPWD claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/gated-report.md"
     restore_key
     trap - EXIT
     grade_all
