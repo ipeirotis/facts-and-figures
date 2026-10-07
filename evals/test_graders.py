@@ -159,6 +159,17 @@ MUTATIONS = [
      lambda d: [r.update(reason="input data/workers.csv was not found; "
                                 "the pipeline could not run")
                 for r in d["values"]], 0),
+    # the true digest mentioned beside a different current one is not a
+    # record of the true digest
+    ("expected digest quoted beside a planted current one", [], "mock_good.json",
+     lambda d: d["data_versions"].update(
+         {"data/workers.csv": "old copy was "
+          + d["data_versions"]["data/workers.csv"]
+          + "; current file is sha256:" + "0" * 64}), 1),
+    ("digest entry with a plain annotation", [], "mock_good.json",
+     lambda d: d["data_versions"].update(
+         {"data/workers.csv": d["data_versions"]["data/workers.csv"]
+          + " (10,000 rows)"}), 0),
 ]
 
 

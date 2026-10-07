@@ -50,18 +50,23 @@ if tool not in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
 # a candidate may be a subdirectory rather than a root: the payload cwd
 # follows the session into any directory it changes into, and judging
 # the marker against <root>/analysis/facts-and-figures-out would read an
-# armed tree as unarmed. Ascend to the nearest ancestor holding a marker
-# or a .git entry (a linked worktree carries .git as a file); with
-# neither anywhere above, keep the path as given
+# armed tree as unarmed. Ascend to the nearest ancestor holding a
+# marker, falling back to the nearest holding a .git entry (a linked
+# worktree carries .git as a file), and keep the path as given with
+# neither anywhere above. An armed marker outranks a nearer .git: a
+# nested repository or submodule inside an armed project must not cut
+# the ascent short of the marker that governs it
 def rootof(p):
     cur = p
+    git = ""
     while True:
-        if (os.path.lexists(os.path.join(cur, "facts-and-figures-out", ".active"))
-                or os.path.lexists(os.path.join(cur, ".git"))):
+        if os.path.lexists(os.path.join(cur, "facts-and-figures-out", ".active")):
             return cur
+        if not git and os.path.lexists(os.path.join(cur, ".git")):
+            git = cur
         nxt = os.path.dirname(cur)
         if nxt == cur:
-            return p
+            return git or p
         cur = nxt
 
 
@@ -85,11 +90,24 @@ if not candidates:
     for cand in (c, rootof(c)):
         if cand not in candidates:
             candidates.append(cand)
+# with runs armed concurrently in separate checkouts (the documented
+# parallel mode), the payload cwd names which run this write belongs
+# to: always picking the first marked candidate would judge a worktree
+# write by the original checkout, denying the run its own proposal
+# directory while allowing it writes into the proposal directory of
+# the other run. Prefer the marked root containing the cwd, then the
+# first marked root, then the first candidate
+cwd_real = os.path.realpath(payload.get("cwd") or os.getcwd())
+marked = [c for c in candidates
+          if os.path.lexists(os.path.join(c, "facts-and-figures-out", ".active"))]
 project = candidates[0]
-for c in candidates:
-    if os.path.lexists(os.path.join(c, "facts-and-figures-out", ".active")):
+for c in marked:
+    if cwd_real == c or cwd_real.startswith(c + os.sep):
         project = c
         break
+else:
+    if marked:
+        project = marked[0]
 marker = os.path.join(project, "facts-and-figures-out", ".active")
 
 tool_input = payload.get("tool_input") or {}

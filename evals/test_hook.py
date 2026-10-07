@@ -321,6 +321,43 @@ def main():
                             w2 / "facts-and-figures-out" / ".active"), o2,
               want_deny=True)
 
+        # a nested git repository (vendored code, a submodule) inside an
+        # armed project must not cut the marker ascent short: the armed
+        # marker above outranks the nearer .git
+        (wproj / "vendor" / "lib").mkdir(parents=True)
+        (wproj / "vendor" / "lib" / ".git").mkdir()
+        (wproj / "manuscript.md").write_text("# Title\n")
+        check("cwd in nested git repo of armed worktree: outside write denied",
+              write_payload(wproj / "vendor" / "lib", wproj / "manuscript.md"),
+              oproj, want_deny=True)
+        check("cwd in nested git repo of armed worktree: proposal write allowed",
+              write_payload(wproj / "vendor" / "lib",
+                            wproj / "facts-and-figures-out" / "s.py"), oproj,
+              want_deny=False)
+
+        # runs armed concurrently in an original checkout and a linked
+        # worktree: the payload cwd names which run a write belongs to,
+        # and neither run may write into the proposal directory of the
+        # other
+        o3 = Path(home_base) / "orig3"
+        (o3 / "facts-and-figures-out").mkdir(parents=True)
+        (o3 / "facts-and-figures-out" / ".active").touch()
+        w3 = Path(home_base) / "wt3"
+        (w3 / "facts-and-figures-out").mkdir(parents=True)
+        (w3 / "facts-and-figures-out" / ".active").touch()
+        (w3 / "manuscript.md").write_text("# Title\n")
+        check("concurrent runs: worktree writes its own proposal",
+              write_payload(w3, w3 / "facts-and-figures-out" / "r.json"), o3,
+              want_deny=False)
+        check("concurrent runs: worktree write into the other proposal denied",
+              write_payload(w3, o3 / "facts-and-figures-out" / "r.json"), o3,
+              want_deny=True)
+        check("concurrent runs: worktree manuscript still denied",
+              write_payload(w3, w3 / "manuscript.md"), o3, want_deny=True)
+        check("concurrent runs: original checkout writes its own proposal",
+              write_payload(o3, o3 / "facts-and-figures-out" / "r.json"), o3,
+              want_deny=False)
+
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)
         check("TMPDIR inside project: data write still denied",

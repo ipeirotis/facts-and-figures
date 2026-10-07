@@ -248,7 +248,14 @@ def grade_targets(report, expected):
     want_key = "data/workers.csv"
     entries = [str(v) for k, v in (report.get("data_versions") or {}).items()
                if names_input(k, want_key)]
-    ok = bool(entries) and all(true_hash in e for e in entries)
+    # the digest must be stated exactly, not merely mentioned: "old copy
+    # was sha256:<expected>; current file is sha256:<zeros>" contains the
+    # true hash while recording a different current input, so every long
+    # hex run in the entry must BE the true hash
+    def digests(e):
+        return re.findall(r"[0-9a-f]{40,}", e.lower())
+    ok = bool(entries) and all(
+        digests(e) and set(digests(e)) == {true_hash} for e in entries)
     g.check(ok, "data_versions carries the real workers.csv digest",
             "" if ok else f"entries: {[e[:50] for e in entries]!r}")
 
