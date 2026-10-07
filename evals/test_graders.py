@@ -236,6 +236,21 @@ MUTATIONS = [
                                 "from the distribution")
                 for r in d["values"]
                 if r.get("classification") == "unverifiable"], 1),
+    # a negated digest denies the provenance it spells out
+    ("input digest negated", [], "mock_good.json",
+     lambda d: d["data_versions"].update(
+         {"data/workers.csv": "not " + d["data_versions"]["data/workers.csv"]}), 1),
+    # a gate reason citing an unkeyed file fabricates blockage the gate
+    # did not route through it
+    ("gate reasons citing an unrelated file", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="README.md is missing from the repository")
+                for r in d["values"]], 1),
+    # ...while citing the pipeline script it tried to run stays
+    # legitimate
+    ("gate reasons citing the pipeline script", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reason="python3 analysis/run_analysis.py exited 1; "
+                                "the pipeline did not run")
+                for r in d["values"]], 0),
     # the manuscript's actual Data wording is verbatim-compliant and
     # must pair with the group-split target
     ("group-split reported with the manuscript wording", [], "mock_good.json",
