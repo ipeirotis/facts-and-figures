@@ -233,6 +233,23 @@ if not os.path.lexists(marker):
     # against EVERY candidate root, since with no marker anywhere the
     # selected project is the environment root while the bootstrap may
     # target the worktree the payload cwd names
+    # a marker belongs at a root: the raw payload cwd is a candidate but
+    # not a root, and a marker created under a subdirectory the session
+    # happened to be in drops out of the ancestor scan once the cwd
+    # returns to the root, leaving the guard inert during the run
+    for c in candidates:
+        if c in roots:
+            continue
+        cm = os.path.join(c, "facts-and-figures-out", ".active")
+        if lexical == cm or resolved == os.path.realpath(cm):
+            deny(
+                "facts-and-figures write boundary: {m} is under the working "
+                "subdirectory {c}, not a repository root, so the guard would go "
+                "inert once the session returns to the root. Create the run "
+                "marker at {r} instead.".format(
+                    m=cm, c=c,
+                    r=os.path.join(roots[0], "facts-and-figures-out", ".active"))
+            )
     bootstrap_checks(candidates)
     sys.exit(0)
 

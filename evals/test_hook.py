@@ -203,6 +203,24 @@ def main():
               write_payload(rproj, rproj / "facts-and-figures-out" / ".active"), rproj,
               want_deny=False)
 
+        # a session whose cwd sits in a subdirectory must not bootstrap the
+        # marker there: once the cwd returns to the root, the ancestor scan
+        # no longer finds it and the guard goes inert mid-run
+        bproj = Path(home_base) / "paper5b"
+        (bproj / ".git").mkdir(parents=True)
+        (bproj / "analysis" / "facts-and-figures-out").mkdir(parents=True)
+        sub_payload = write_payload(bproj / "analysis",
+                                    bproj / "analysis" / "facts-and-figures-out" / ".active")
+        check("no marker, cwd in subdirectory: marker under the subdirectory denied",
+              sub_payload, bproj, want_deny=True)
+        root_payload = write_payload(bproj / "analysis",
+                                     bproj / "facts-and-figures-out" / ".active")
+        check("no marker, cwd in subdirectory: marker at the root allowed",
+              root_payload, bproj, want_deny=False)
+        check("no marker, cwd in subdirectory: unrelated write allowed",
+              write_payload(bproj / "analysis", bproj / "analysis" / "notes.md"),
+              bproj, want_deny=False)
+
         # a broken marker symlink must still arm the guard: with exists()
         # it would read as absent and the write recreating the marker could
         # follow the link to create an author file
