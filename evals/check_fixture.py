@@ -80,13 +80,16 @@ def main():
 
         # the answer key must still describe the manuscript: a target whose
         # value or anchors appear nowhere in the text is stale, and grading
-        # against it would bless claims the manuscript no longer makes
-        manuscript = (fixture / "manuscript.md").read_text()
+        # against it would bless claims the manuscript no longer makes. The
+        # probes carry the JSON grader's digit guards, so a drifted 140
+        # does not satisfy a probe for 40 as a substring
+        from grade_json_report import anchor_rx
+        manuscript = (fixture / "manuscript.md").read_text().lower()
         for t in expected["targets"]:
             probes = [str(t["manuscript_value"])] + list(t.get("anchors", []))
-            check(any(p in manuscript for p in probes),
-                  f"{t['id']}: manuscript still states the keyed value",
-                  f"none of {probes[:3]}... found" if not any(p in manuscript for p in probes) else "")
+            hit = any(anchor_rx(p).search(manuscript) for p in probes)
+            check(hit, f"{t['id']}: manuscript still states the keyed value",
+                  f"none of {probes[:3]}... found" if not hit else "")
 
         for t in expected["targets"]:
             tid = t["id"]

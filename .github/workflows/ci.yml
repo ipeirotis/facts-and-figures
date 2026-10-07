@@ -25,9 +25,15 @@ jobs:
             done
       - name: check version consistency
         run: |
+          # the authoritative fields, not an arbitrary occurrence: the
+          # SKILL.md check reads only the frontmatter block, and
+          # plugin.json is parsed as JSON
           v="$(cat VERSION)"
-          grep -qF "version: \"$v\"" SKILL.md || { echo "SKILL.md metadata.version != VERSION ($v)"; exit 1; }
-          grep -qF "\"version\": \"$v\"" .claude-plugin/plugin.json || { echo "plugin.json version != VERSION ($v)"; exit 1; }
+          awk '/^---$/{n++; next} n==1' SKILL.md \
+            | grep -qE "^[[:space:]]*version: \"$v\"[[:space:]]*$" \
+            || { echo "SKILL.md frontmatter version != VERSION ($v)"; exit 1; }
+          python3 -c "import json,sys; sys.exit(0 if json.load(open('.claude-plugin/plugin.json'))['version'] == open('VERSION').read().strip() else 1)" \
+            || { echo "plugin.json version != VERSION ($v)"; exit 1; }
 
   plugin-validate:
     name: validate plugin manifests

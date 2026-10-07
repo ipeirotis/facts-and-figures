@@ -35,6 +35,16 @@ RECORD_REQUIRED = {"location", "reported", "classification"}
 def norm_path(k):
     """One spelling for a provenance path: slashes forward, no ./ prefix."""
     return re.sub(r"^\./", "", str(k).replace("\\", "/"))
+
+
+def names_input(key, want):
+    """True when a provenance key names the workspace-relative input: an
+    exact match, or an ABSOLUTE path ending in it. A relative
+    unrelated/data/workers.csv names a different input and must not
+    suffix-match."""
+    nk = norm_path(key).lower()
+    want = want.lower()
+    return nk == want or (nk.startswith("/") and nk.endswith("/" + want))
 TOP_REQUIRED = ("schema", "skill_version", "manuscript_files", "pipeline_command",
                 "environment", "data_versions", "values")
 
@@ -189,9 +199,12 @@ def grade_top_level(g, report, expected):
     # group split in Results where the key names Data
     place_tokens = ("abstract", "data", "results", "method", "table", "figure",
                     "introduction", "discussion", "appendix", "conclusion")
-    # whole-token matching: "metadata" contains "data" but locates nothing
+    # whole-token matching, bounded on both sides with plurals allowed:
+    # "metadata" contains "data" and "database" starts with it, yet
+    # neither locates a manuscript section
     bad_locs = [r.get("location") for r in values
-                if not any(re.search(r"\b" + tok, str(r.get("location", "")).lower())
+                if not any(re.search(r"\b" + tok + r"(?:e?s)?\b",
+                                     str(r.get("location", "")).lower())
                            for tok in place_tokens)]
     g.check(not bad_locs, "record locations identify a manuscript place",
             f"unusable locations: {bad_locs[:3]}" if bad_locs else "")
@@ -212,7 +225,7 @@ def grade_targets(report, expected):
     true_hash = hashlib.sha256(fixture_data.read_bytes()).hexdigest()
     want_key = "data/workers.csv"
     entries = [str(v) for k, v in (report.get("data_versions") or {}).items()
-               if norm_path(k) == want_key or norm_path(k).endswith("/" + want_key)]
+               if names_input(k, want_key)]
     ok = bool(entries) and all(true_hash in e for e in entries)
     g.check(ok, "data_versions carries the real workers.csv digest",
             "" if ok else f"entries: {[e[:50] for e in entries]!r}")
@@ -363,10 +376,7 @@ def grade_gate(report, expected):
         # locate the entry by normalized path, as the normal-case check
         # does — a basename substring would accept an absence recorded
         # for a different file (data/notworkers.csv)
-        want = norm_path(name).lower()
-        entries = [str(v) for k, v in dv.items()
-                   if norm_path(k).lower() == want
-                   or norm_path(k).lower().endswith("/" + want)]
+        entries = [str(v) for k, v in dv.items() if names_input(k, norm_path(name))]
         faked = [e for e in entries if re.search(r"[0-9a-f]{40,}", e.lower())]
         g.check(not faked, f"gate: no digest asserted for removed input {name}",
                 f"entries: {faked}" if faked else "")

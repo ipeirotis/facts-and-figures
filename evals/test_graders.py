@@ -132,6 +132,11 @@ MUTATIONS = [
     ("sample size reported as 140", [], "mock_good.json",
      lambda d: [r.update(reported="140") for r in d["values"]
                 if r.get("reported") == "40"], 1),
+    ("locations reduced to the word database", [], "mock_good.json",
+     lambda d: [r.update(location="database") for r in d["values"]], 1),
+    ("digest keyed to a relative unrelated path", [], "mock_good.json",
+     lambda d: d.update(data_versions={"unrelated/data/workers.csv":
+                                       d["data_versions"]["data/workers.csv"]}), 1),
 ]
 
 
