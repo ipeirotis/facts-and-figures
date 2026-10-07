@@ -35,11 +35,11 @@ python3 evals/check_fixture.py
 
 No LLM. Runs the pipeline in a scratch copy and asserts that every
 documented true value is what the pipeline actually produces, that each
-expected classification follows from the protocol's own half-open
-tolerance rule (`m - u/2 <= v < m + u/2`, lower endpoint a disclosed
-boundary match, upper endpoint excluded), and that the gate case fails
-loudly. This is the CI-safe layer: if it fails, the fixture has drifted
-and the agent eval is meaningless.
+expected classification follows from the protocol's own tolerance rule
+(half-open on magnitudes: `|m| - u/2 <= |v| < |m| + u/2` with matching
+sign, the lower magnitude endpoint a disclosed boundary match, the upper
+excluded), and that the gate case fails loudly. This is the CI-safe layer:
+if it fails, the fixture has drifted and the agent eval is meaningless.
 
 ## Layer 2: agent-in-the-loop eval
 

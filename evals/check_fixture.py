@@ -8,10 +8,11 @@ tolerance rule applied to those values, and (c) the gate case fails loudly
 when the dataset is removed.
 
 The tolerance rule checked here is the one references/analysis-integrity.md
-states: for a manuscript value m reported to k decimals, with u = 10^-k,
-the accepted set is the half-open interval m - u/2 <= v < m + u/2; a value
-landing exactly on the lower endpoint is a match that must additionally be
-disclosed as a boundary case; the upper endpoint is excluded.
+states (as of v0.2.1, on magnitudes): for a manuscript value m reported to
+k decimals, with u = 10^-k, the accepted set is |m| - u/2 <= |v| < |m| + u/2
+with v of the same sign as m (for m = 0, simply |v| < u/2); a value landing
+exactly on the lower magnitude endpoint is a match that must additionally
+be disclosed as a boundary case; the upper magnitude endpoint is excluded.
 
 Usage: python3 evals/check_fixture.py
 Exit code 0 iff every check passes.
@@ -37,12 +38,16 @@ def check(ok, label, detail=""):
 
 
 def classify(v, m, decimals):
-    """Apply the protocol's half-open tolerance rule. Returns (cls, boundary)."""
+    """Apply the protocol's half-open tolerance rule on magnitudes.
+    Returns (cls, boundary)."""
     u = 10 ** -decimals
-    lo, hi = m - u / 2, m + u / 2
-    if abs(v - lo) < EPS:
+    if v != 0 and m != 0 and (v > 0) != (m > 0):
+        return "mismatch", False
+    av, am = abs(v), abs(m)
+    lo, hi = am - u / 2, am + u / 2
+    if m != 0 and abs(av - lo) < EPS:
         return "match", True
-    if lo < v < hi - EPS:
+    if lo < av < hi - EPS:
         return "match", False
     return "mismatch", False
 
