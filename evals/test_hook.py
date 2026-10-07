@@ -179,6 +179,8 @@ def main():
         check("no marker, symlinked root: marker bootstrap write denied",
               write_payload(nproj, nproj / "facts-and-figures-out" / ".active"), nproj,
               want_deny=True)
+        check("no marker, symlinked root: bootstrap via the resolved path denied",
+              write_payload(nproj, nproj / "data" / ".active"), nproj, want_deny=True)
         check("no marker, symlinked root: unrelated write still allowed",
               write_payload(nproj, nproj / "notes.md"), nproj, want_deny=False)
         rproj = Path(home_base) / "paper5"

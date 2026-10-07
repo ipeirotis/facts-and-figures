@@ -80,8 +80,11 @@ if not os.path.lexists(marker):
     # inert without the marker — except for the one write the protocol
     # makes while unarmed, the marker bootstrap itself: that write must
     # resolve to the marker path, or a default directory that is already
-    # a symlink routes the marker creation into an author directory
-    if lexical == marker and os.path.realpath(marker) != marker:
+    # a symlink routes the marker creation into an author directory. The
+    # check covers both spellings — the marker path itself, and a write
+    # addressed straight at the redirect target it resolves to
+    marker_real = os.path.realpath(marker)
+    if (lexical == marker or resolved == marker_real) and marker_real != marker:
         deny(
             "facts-and-figures write boundary: the marker path {m} does not resolve "
             "to itself — facts-and-figures-out is a symlink, so creating the run "

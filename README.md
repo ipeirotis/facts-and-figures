@@ -143,22 +143,32 @@ jobs:
           # itself needs scrubbed credentials.
           CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
         run: |
+          # the prose capture goes to RUNNER_TEMP, not the checkout root:
+          # a shell redirect bypasses the write-boundary hook, and a paper
+          # repository may own a file by this name
           claude -p "Using the facts-and-figures skill installed under .claude/skills/, verify every number reported in the manuscript against this repository's analysis pipeline. Produce the skill's full four-section report." \
-            --permission-mode acceptEdits --allowedTools Bash | tee verification-report.md
+            --permission-mode acceptEdits --allowedTools Bash | tee "$RUNNER_TEMP/verification-report.md"
       - name: fail on mismatches
         run: |
           python3 -c "
           import json, sys
           r = json.load(open('facts-and-figures-out/verification-report.json'))
-          bad = [v for v in r['values'] if v['classification'] != 'match']
+          vals = r.get('values') or []
+          # an empty report verified nothing; completeness beyond that is
+          # your spot check against the manuscript, since a real paper has
+          # no answer key
+          if not vals:
+              print('verification report contains no value records'); sys.exit(1)
+          bad = [v for v in vals if v['classification'] != 'match']
           for v in bad: print(v['classification'], v['reported'], '-', v['location'])
+          print(f'{len(vals)} values checked, {len(bad)} not a clean match')
           sys.exit(1 if bad else 0)"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: verification
           path: |
-            verification-report.md
+            ${{ runner.temp }}/verification-report.md
             facts-and-figures-out/verification-report.json
 ```
 
