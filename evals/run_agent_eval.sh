@@ -151,9 +151,17 @@ if command -v claude >/dev/null 2>&1; then
     # could chmod it back. A guarantee needs a filesystem namespace that
     # exposes only the prepared fixture to the measured process, which is
     # CI-infrastructure territory, not a portable shell harness.
+    # restore each directory's own prior mode — forcing 755 would leave a
+    # private (700) checkout more readable than the eval found it
+    dir_mode() {
+        python3 -c 'import os,sys;print(oct(os.stat(sys.argv[1]).st_mode & 0o7777)[2:])' "$1"
+    }
+    EVALS_MODE="$(dir_mode "$EVALS_DIR")"
+    GIT_MODE=""
+    if [ -d "$SKILL_DIR/.git" ]; then GIT_MODE="$(dir_mode "$SKILL_DIR/.git")"; fi
     restore_key() {
-        chmod 755 "$EVALS_DIR"
-        if [ -d "$SKILL_DIR/.git" ]; then chmod 755 "$SKILL_DIR/.git"; fi
+        chmod "$EVALS_MODE" "$EVALS_DIR"
+        if [ -n "$GIT_MODE" ]; then chmod "$GIT_MODE" "$SKILL_DIR/.git"; fi
     }
     trap restore_key EXIT
     chmod 000 "$EVALS_DIR"
@@ -174,8 +182,8 @@ variable is part of each command because this script's own export dies
 with it — without the prefix, the pre-approved Bash commands would see
 your ANTHROPIC_API_KEY:
 
-  cd $WORK/verify && CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1 claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/verify-report.md
-  cd $WORK/gated && CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1 claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/gated-report.md
-  $EVALS_DIR/run_agent_eval.sh --grade-only $WORK
+  cd "$WORK/verify" && CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1 claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > "$WORK/verify-report.md"
+  cd "$WORK/gated" && CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1 claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > "$WORK/gated-report.md"
+  "$EVALS_DIR/run_agent_eval.sh" --grade-only "$WORK"
 EOF
 fi

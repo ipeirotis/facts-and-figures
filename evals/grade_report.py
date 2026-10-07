@@ -81,20 +81,30 @@ def assertions_for(lines, anchors):
 def grade_targets(report, expected):
     lines = report.splitlines()
     ok = grade_sections(report)
+    idx = report.lower().rfind("author decisions")
+    dlines = (report[idx:] if idx != -1 else "").splitlines()
     for t in expected["targets"]:
         if anchor_lines(lines, t["anchors"]):
             print(f"PASS  {t['id']}: covered by the report")
         else:
             print(f"FAIL  {t['id']}: no report line mentions any anchor {t['anchors']}")
             ok = False
+        if t["expected"] in ("mismatch", "unverifiable"):
+            # a planted mismatch and an unverifiable value are the
+            # author's calls to make — correct or disclose — so each must
+            # surface in Author decisions, not only in Results; the live
+            # runs all did this unprompted
+            if anchor_lines(dlines, t["anchors"]):
+                print(f"PASS  {t['id']}: raised in Author decisions")
+            else:
+                print(f"FAIL  {t['id']}: {t['expected']} value absent from Author decisions")
+                ok = False
         if t.get("boundary"):
             # the protocol requires the tie named in Author decisions, not
             # merely mentioned in Results, so the author chooses the
             # rounding convention — and the disclosure must sit with THIS
             # value: a boundary word about some other target is not the
             # required tie disclosure
-            idx = report.lower().rfind("author decisions")
-            dlines = (report[idx:] if idx != -1 else "").splitlines()
             anchored = any(
                 BOUNDARY_RE.search("\n".join(dlines[max(0, i - 1):i + 2]))
                 for i in anchor_lines(dlines, t["anchors"]))

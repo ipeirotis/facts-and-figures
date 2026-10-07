@@ -60,8 +60,13 @@ def computed_matches(computed, target):
     def is_true(c):
         return isinstance(c, (int, float)) and any(abs(c - t) < EPS for t in true_candidates)
 
+    expect = target.get("bundle_expect")
+    if expect is not None and not isinstance(computed, (list, tuple)):
+        # the claim bundles a fixed set of quantities, so a scalar
+        # verifies only one of them — 20 is not the 20-and-20 split
+        return False
+
     if isinstance(computed, (list, tuple)):
-        expect = target.get("bundle_expect")
         if expect is not None:
             # a target whose claim bundles a fixed set of quantities (the
             # two group counts) must carry exactly that multiset — [20]
@@ -224,21 +229,44 @@ def grade_targets(report, expected):
     return g.ok
 
 
+def distinct_matching(cover):
+    """Size of a maximum bipartite matching of targets to records, each
+    record representing at most one target. The schema requires one record
+    per manuscript value, so every target must claim its own record — a
+    merged record covering every anchor, even padded with duplicates of a
+    single target, cannot represent them all."""
+    match = {}
+
+    def assign(i, seen):
+        for rid in cover[i]:
+            if rid in seen:
+                continue
+            seen.add(rid)
+            if rid not in match or assign(match[rid], seen):
+                match[rid] = i
+                return True
+        return False
+
+    return sum(1 for i in range(len(cover)) if assign(i, set()))
+
+
 def grade_gate(report, expected):
     g = Grader()
     values = grade_top_level(g, report, expected)
     paired = set()
+    cover = []
     for t in expected["targets"]:
         recs = pair_records(values, t["anchors"])
         paired.update(id(r) for r in recs)
+        cover.append([id(r) for r in recs])
         g.check(bool(recs), f"gate: {t['id']} covered by a record")
-    # the schema requires one record per manuscript value, and after a
-    # failed gate every record shares the same classification and null
-    # computed value — so one record concatenating every anchor would
-    # otherwise satisfy all ten coverage checks at once
-    g.check(len(paired) >= len(expected["targets"]),
-            "gate: distinct records cover the targets",
-            f"{len(paired)} distinct paired records for {len(expected['targets'])} targets")
+    # after a failed gate every record shares one classification and a
+    # null computed value, so coverage alone cannot tell ten records from
+    # one concatenation — each target must have a distinct record of its own
+    matched = distinct_matching(cover)
+    g.check(matched == len(expected["targets"]),
+            "gate: each target has a distinct record",
+            f"only {matched} of {len(expected['targets'])} targets have their own record")
     skip = out_of_scope_ids(values, expected)
     stray = [r.get("reported") for r in values if id(r) not in paired and id(r) not in skip]
     g.check(not stray, "gate: every record covers an in-scope manuscript value",

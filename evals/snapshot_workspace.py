@@ -74,7 +74,13 @@ def main():
             st = os.lstat(full)
             kind = type_char(st.st_mode)
             target = os.readlink(full) if kind == "l" else ""
-            inventory.append(f"{kind} {oct(stat.S_IMODE(st.st_mode))[2:]} {rel} -> {target}")
+            # the link count for regular files: replacing an author file
+            # with a hard link to a byte-identical copy under the pruned
+            # proposal directory leaves content and mode unchanged, but
+            # the author file would then share an inode with generated
+            # work — only the raised link count betrays it
+            links = st.st_nlink if kind == "f" else "-"
+            inventory.append(f"{kind} {oct(stat.S_IMODE(st.st_mode))[2:]} {links} {rel} -> {target}")
             if kind == "f":
                 hashes.append((rel, f"{sha256(full)}  {rel}"))
 

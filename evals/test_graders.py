@@ -48,6 +48,23 @@ def _collapsed_gate(d):
     d["values"] = [merged]
 
 
+def _merged_plus_duplicates(d):
+    """A merged record covering every anchor, padded with duplicates of a
+    single target to inflate the record count, must still fail: each
+    target needs a distinct record of its own."""
+    merged = dict(d["values"][0])
+    merged["reported"] = "; ".join(str(r.get("reported", "")) for r in d["values"])
+    first = dict(d["values"][0])
+    d["values"] = [merged] + [dict(first) for _ in range(len(d["values"]) - 1)]
+
+
+def _scalar_bundle(d):
+    """A scalar 20 for the 20-and-20 group split verifies only one group."""
+    for r in d["values"]:
+        if r.get("computed") == [20, 20]:
+            r["computed"] = 20
+
+
 def _renamed_data_key(d):
     """A legitimate alternative spelling of the hashed input's path must
     still pass: the schema requires the actual path, not one dictionary
@@ -69,29 +86,46 @@ MUTATIONS = [
     ("./-prefixed data_versions key", [], "mock_good.json", _renamed_data_key, 0),
     ("all anchors collapsed into one record", ["--gate"], "mock_gate.json",
      _collapsed_gate, 1),
+    ("merged record padded with duplicates", ["--gate"], "mock_gate.json",
+     _merged_plus_duplicates, 1),
+    ("scalar computed for the bundled group split", [], "mock_good.json",
+     _scalar_bundle, 1),
 ]
 
 
-def md_boundary_case():
-    """A boundary word about a different value in Author decisions must not
-    satisfy the tie disclosure for the flagged share."""
+# line-level corruptions of the passing prose mock that grade_report.py
+# must reject: (label, original line, replacement)
+MD_MUTATIONS = [
+    ("misdirected boundary",
+     "The flagged share sits exactly on the rounding boundary; confirm the intended convention.",
+     "There are no boundary concerns for the overall mean 71.48."),
+    ("mismatch dropped from Author decisions",
+     "The reported difference 6.23 disagrees with the pipeline's 6.32; decide whether to correct both occurrences.",
+     "Decide whether any corrections are needed."),
+    ("unverifiable dropped from Author decisions",
+     "The 64% retention could not be verified from the distributed data; confirm it against the restricted source or state that it is not reproducible.",
+     "One value remains for you to confirm against the restricted source."),
+]
+
+
+def md_mutation_cases():
     text = (TESTS / "mock_good.md").read_text()
-    original = ("The flagged share sits exactly on the rounding boundary; "
-                "confirm the intended convention.")
-    mutated = text.replace(
-        original, "There are no boundary concerns for the overall mean 71.48.")
-    assert mutated != text, "mock_good.md boundary line changed; update this test"
-    f = tempfile.NamedTemporaryFile("w", suffix=".md", delete=False)
-    f.write(mutated)
-    f.close()
-    proc = run_grader("grade_report.py", [], Path(f.name))
-    Path(f.name).unlink()
-    ok = proc.returncode == 1
-    print(f"{'PASS' if ok else 'FAIL'}  grade_report.py mock_good.md with misdirected boundary: "
-          f"exit {proc.returncode}, want 1")
-    if not ok:
-        print(proc.stdout)
-    return ok
+    failures = 0
+    for label, original, replacement in MD_MUTATIONS:
+        mutated = text.replace(original, replacement)
+        assert mutated != text, f"mock_good.md line changed; update MD_MUTATIONS ({label})"
+        f = tempfile.NamedTemporaryFile("w", suffix=".md", delete=False)
+        f.write(mutated)
+        f.close()
+        proc = run_grader("grade_report.py", [], Path(f.name))
+        Path(f.name).unlink()
+        ok = proc.returncode == 1
+        print(f"{'PASS' if ok else 'FAIL'}  grade_report.py mock_good.md with {label}: "
+              f"exit {proc.returncode}, want 1")
+        if not ok:
+            print(proc.stdout)
+            failures += 1
+    return failures
 
 
 def prepared(mock, mutate=None):
@@ -140,8 +174,7 @@ def main():
         if not ok:
             print(proc.stdout)
             failures += 1
-    if not md_boundary_case():
-        failures += 1
+    failures += md_mutation_cases()
     print()
     if failures:
         print(f"{failures} grader self-test(s) FAILED")
