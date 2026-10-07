@@ -16,6 +16,7 @@ from pathlib import Path
 
 EVALS = Path(__file__).resolve().parent
 TESTS = EVALS / "tests"
+VERSION = (EVALS.parent / "VERSION").read_text().strip()
 
 # (grader script, extra args, mock file, expected exit code)
 CASES = [
@@ -30,46 +31,71 @@ CASES = [
 ]
 
 
-def numeric_reported_case():
-    """A record whose `reported` field is a JSON number instead of the
-    manuscript's verbatim string must fail grading, even when its digits
-    still pair with a target anchor (10,000 -> 10000)."""
-    report = json.loads((TESTS / "mock_good.json").read_text())
-    for r in report["values"]:
+def _numeric_reported(d):
+    """The Codex round-15 PoC: a JSON 10000 whose digits still pair with
+    the 10,000 anchor."""
+    for r in d["values"]:
         if r.get("reported") == "10,000":
             r["reported"] = 10000
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        json.dump(report, f)
-        path = f.name
-    try:
-        proc = subprocess.run(
-            [sys.executable, str(EVALS / "grade_json_report.py"), path],
-            capture_output=True, text=True,
-        )
-    finally:
-        Path(path).unlink()
-    ok = proc.returncode == 1
-    print(f"{'PASS' if ok else 'FAIL'}  grade_json_report.py mock_good with numeric reported: "
-          f"exit {proc.returncode}, want 1")
-    if not ok:
-        print(proc.stdout)
-    return ok
+
+
+# single-field corruptions of a passing mock that the JSON grader must
+# reject: (label, extra args, base mock, mutation)
+MUTATIONS = [
+    ("numeric reported", [], "mock_good.json", _numeric_reported),
+    ("wrong skill_version", [], "mock_good.json",
+     lambda d: d.update(skill_version="not-the-installed-skill")),
+    ("fabricated digest for removed input", ["--gate"], "mock_gate.json",
+     lambda d: d["data_versions"].update({"data/workers.csv": "sha256:" + "0" * 64})),
+]
+
+
+def prepared(mock, mutate=None):
+    """A temp copy of a JSON mock with skill_version pinned to the current
+    VERSION — the static mocks test report semantics, not release
+    arithmetic, so a version bump must not break them — plus an optional
+    corruption for the adversarial cases."""
+    data = json.loads((TESTS / mock).read_text())
+    data["skill_version"] = VERSION
+    if mutate:
+        mutate(data)
+    f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+    json.dump(data, f)
+    f.close()
+    return Path(f.name)
+
+
+def run_grader(script, extra, path):
+    return subprocess.run(
+        [sys.executable, str(EVALS / script), *extra, str(path)],
+        capture_output=True, text=True,
+    )
 
 
 def main():
     failures = 0
     for script, extra, mock, want in CASES:
-        proc = subprocess.run(
-            [sys.executable, str(EVALS / script), *extra, str(TESTS / mock)],
-            capture_output=True, text=True,
-        )
+        if mock.endswith(".json"):
+            path = prepared(mock)
+            proc = run_grader(script, extra, path)
+            path.unlink()
+        else:
+            proc = run_grader(script, extra, TESTS / mock)
         ok = proc.returncode == want
         print(f"{'PASS' if ok else 'FAIL'}  {script} {' '.join(extra)} {mock}: exit {proc.returncode}, want {want}")
         if not ok:
             print(proc.stdout)
             failures += 1
-    if not numeric_reported_case():
-        failures += 1
+    for label, extra, mock, mutate in MUTATIONS:
+        path = prepared(mock, mutate)
+        proc = run_grader("grade_json_report.py", extra, path)
+        path.unlink()
+        ok = proc.returncode == 1
+        print(f"{'PASS' if ok else 'FAIL'}  grade_json_report.py {' '.join(extra)} {mock} with {label}: "
+              f"exit {proc.returncode}, want 1")
+        if not ok:
+            print(proc.stdout)
+            failures += 1
     print()
     if failures:
         print(f"{failures} grader self-test(s) FAILED")

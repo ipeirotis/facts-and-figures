@@ -165,6 +165,23 @@ def main():
               write_payload(bproj, bproj / "facts-and-figures-out" / "s.py"), bproj,
               want_deny=False)
 
+        # a hard link in the proposal directory shares the author file's
+        # inode: realpath stays under the proposal, so only the link count
+        # betrays it
+        os.link(proj / "manuscript.md", proj / "facts-and-figures-out" / "vr.json")
+        check("hard-linked proposal file: write denied",
+              write_payload(proj, proj / "facts-and-figures-out" / "vr.json"), proj,
+              want_deny=True)
+        (proj / "facts-and-figures-out" / "vr.json").unlink()
+
+        # nor may the marker itself be a hard link to an author file
+        marker.unlink()
+        os.link(proj / "manuscript.md", marker)
+        check("hard-linked marker: write to the marker path denied",
+              write_payload(proj, marker), proj, want_deny=True)
+        marker.unlink()
+        marker.touch()
+
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)
         check("TMPDIR inside project: data write still denied",

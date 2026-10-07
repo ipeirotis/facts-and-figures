@@ -113,11 +113,20 @@ name: verify-manuscript
 on:
   push:
     branches: [main]
+# the job executes the repository's own manuscript and pipeline content
+# with Bash pre-approved, so it runs with read-only repo access
+permissions:
+  contents: read
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # checkout persists its token in .git/config by default; the
+          # pre-approved Bash commands must not inherit a credential that
+          # could push
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with: {node-version: 22}
       - run: npm install -g @anthropic-ai/claude-code

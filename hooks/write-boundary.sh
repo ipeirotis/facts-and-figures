@@ -34,7 +34,7 @@ set -u
 command -v python3 >/dev/null 2>&1 || exit 0
 
 exec python3 -c '
-import json, os, sys
+import json, os, stat, sys
 
 try:
     payload = json.load(sys.stdin)
@@ -79,6 +79,17 @@ def under(path, root):
     return path == root or path.startswith(root + os.sep)
 
 
+# a hard link shares its inode: a proposal file linked to the manuscript
+# keeps its realpath under the proposal while a write through it would
+# truncate the manuscript — the inode route the symlink checks cannot see
+def multi_linked(path):
+    try:
+        st = os.lstat(path)
+    except OSError:
+        return False
+    return stat.S_ISREG(st.st_mode) and st.st_nlink > 1
+
+
 # a directory is a safe allowance only if it neither equals nor contains
 # the project, where a path like ".." would whitelist the whole tree
 def safe_root(cand):
@@ -103,7 +114,7 @@ for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
         continue
     scratch_roots.append(root)
 
-if lexical == marker and os.path.realpath(marker) == marker:
+if lexical == marker and os.path.realpath(marker) == marker and not multi_linked(marker):
     # lifecycle writes to the marker itself are allowed — but only when
     # the marker path resolves to itself: a marker replaced by a symlink,
     # or reached through a symlinked proposal root, would otherwise route
@@ -117,12 +128,12 @@ if under(lexical, project):
     # RESOLVE inside the proposal directory, or a symlink planted there
     # (facts-and-figures-out/escape -> ../manuscript.md) escapes the
     # boundary from within
-    if proposal_safe and under(resolved, proposal):
+    if proposal_safe and under(resolved, proposal) and not multi_linked(resolved):
         sys.exit(0)
 else:
     allowed = ([proposal] if proposal_safe else []) + scratch_roots
     for root in allowed:
-        if under(resolved, root):
+        if under(resolved, root) and not multi_linked(resolved):
             sys.exit(0)
 
 reason = (

@@ -21,6 +21,7 @@ missing input must be named. Exit code 0 iff every check passes.
 
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -106,6 +107,13 @@ def grade_top_level(g, report, expected):
         good = v == SCHEMA if key == "schema" else bool(v)
         g.check(good, f"top-level {key} present and non-empty",
                 "" if good else repr(v)[:60])
+    # the eval installs this repository's skill, so the declared version
+    # must be the installed one — arbitrary provenance would leave a
+    # consumer unable to tell which protocol produced the report
+    want_version = (EVALS.parent / "VERSION").read_text().strip()
+    got_version = str(report.get("skill_version") or "").strip()
+    g.check(got_version == want_version, "skill_version matches the installed skill",
+            "" if got_version == want_version else f"report {got_version!r} vs VERSION {want_version!r}")
     want_files = expected.get("manuscript_files")
     if want_files:
         got = report.get("manuscript_files")
@@ -226,6 +234,15 @@ def grade_gate(report, expected):
     g.check(not any(r.get("boundary") is True for r in values),
             "no boundary tie asserted after the failed gate")
     g.check(all(r.get("reason") for r in values), "reason on every record")
+    # provenance for the removed input must record its absence: asserting
+    # a digest for a file there was nothing to hash is a planted claim
+    dv = report.get("data_versions") or {}
+    for name in expected["gate_case"]["remove"]:
+        base = name.split("/")[-1].lower()
+        faked = [str(v) for k, v in dv.items() if base in str(k).lower()
+                 and re.search(r"[0-9a-f]{40,}", str(v).lower())]
+        g.check(not faked, f"gate: no digest asserted for removed input {name}",
+                f"entries: {faked}" if faked else "")
     text = json.dumps(report).lower()
     for name in expected["gate_case"]["report_must_name"]:
         g.check(name.lower() in text, f"the missing input {name} is named")

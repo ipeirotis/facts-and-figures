@@ -15,6 +15,12 @@ on:
       - hooks/**
       - agents/**
       - evals/**
+      # the workflow itself: a push changing only the orchestration must
+      # still exercise the run it orchestrates
+      - .github/workflows/agent-eval.yml
+
+permissions:
+  contents: read
 
 jobs:
   agent-eval:
@@ -22,6 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the eval pre-approves Bash for the measured agent, which must
+          # not inherit a usable checkout token from .git/config
+          persist-credentials: false
       - name: check for API key
         id: key
         env:

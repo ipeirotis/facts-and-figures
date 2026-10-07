@@ -70,7 +70,10 @@ snapshot() {
 
 workspace_clean() {
     local ws="$1" pre_file="$2" label="$3" bad=0
-    if [ -e "$ws/facts-and-figures-out/.active" ]; then
+    # -L as well as -e: a marker left behind as a dangling symlink still
+    # arms the hook (which uses lexists), but -e alone would miss it and
+    # the snapshot prunes the proposal directory entirely
+    if [ -e "$ws/facts-and-figures-out/.active" ] || [ -L "$ws/facts-and-figures-out/.active" ]; then
         echo "FAIL  $label: run marker facts-and-figures-out/.active was not removed"
         bad=1
     fi
@@ -139,27 +142,36 @@ export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1
 if command -v claude >/dev/null 2>&1; then
     # the process being measured must not be able to read its own answer
     # key: the workspaces never receive evals/, and while the agent runs
-    # this directory is closed off entirely (restored even if a run dies).
+    # this directory AND the git object database are closed off (restored
+    # even if a run dies) — chmodding the working tree alone still left
+    # `git show HEAD:evals/expected.json` readable from the checkout.
     # Root bypasses permission bits; CI runners and ordinary local users
     # do not.
-    restore_evals() { chmod 755 "$EVALS_DIR"; }
-    trap restore_evals EXIT
+    restore_key() {
+        chmod 755 "$EVALS_DIR"
+        if [ -d "$SKILL_DIR/.git" ]; then chmod 755 "$SKILL_DIR/.git"; fi
+    }
+    trap restore_key EXIT
     chmod 000 "$EVALS_DIR"
+    if [ -d "$SKILL_DIR/.git" ]; then chmod 000 "$SKILL_DIR/.git"; fi
     echo "== running verification case =="
     (cd "$WORK/verify" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/verify-report.md"
     echo "== running gate case =="
     (cd "$WORK/gated" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/gated-report.md"
-    restore_evals
+    restore_key
     trap - EXIT
     grade_all
     exit "$?"
 else
     cat <<EOF
 claude CLI not found; run each case yourself, saving the agent's report,
-then apply the full grading and workspace-integrity suite:
+then apply the full grading and workspace-integrity suite. The scrub
+variable is part of each command because this script's own export dies
+with it — without the prefix, the pre-approved Bash commands would see
+your ANTHROPIC_API_KEY:
 
-  cd $WORK/verify && claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/verify-report.md
-  cd $WORK/gated && claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/gated-report.md
+  cd $WORK/verify && CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1 claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/verify-report.md
+  cd $WORK/gated && CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1 claude -p "$PROMPT" ${CLAUDE_ARGS[*]} > $WORK/gated-report.md
   $EVALS_DIR/run_agent_eval.sh --grade-only $WORK
 EOF
 fi
