@@ -442,10 +442,31 @@ MUTATIONS = [
      lambda d: d["data_versions"].update(
          {"data/fabricated.csv": "sha256:" + "00" * 32}), 1),
     # ...while hashing the pipeline script itself is legitimate
-    # provenance a live run recorded
+    # provenance a live run recorded — with the REAL digest: a
+    # fabricated one is false provenance even for a file that exists
     ("data_versions entry for the pipeline script", [], "mock_good.json",
      lambda d: d["data_versions"].update(
-         {"analysis/run_analysis.py": "sha256:" + "ab" * 32}), 0),
+         {"analysis/run_analysis.py": "sha256:" + __import__("hashlib").sha256(
+             (EVALS / "fixtures/toy-paper/analysis/run_analysis.py")
+             .read_bytes()).hexdigest()}), 0),
+    ("fabricated digest for a non-input fixture file", [], "mock_good.json",
+     lambda d: d["data_versions"].update(
+         {"AGENTS.md": "sha256:" + "00" * 32}), 1),
+    # a copy of a record differing only in its note is the same
+    # manuscript occurrence double-counted
+    ("duplicate record differing only in note", [], "mock_good.json",
+     lambda d: d["values"].append(
+         {**[v for v in d["values"] if v.get("reported") == "6.23"][0],
+          "note": "second look"}), 1),
+    # the workspace is case-sensitive: a case variant names no file
+    ("data_versions keyed by a case variant", [], "mock_good.json",
+     lambda d: d["data_versions"].update(
+         {"DATA/WORKERS.CSV": d["data_versions"].pop("data/workers.csv")}), 1),
+    ("manuscript_files as a case variant", [], "mock_good.json",
+     lambda d: d.update(manuscript_files=["MANUSCRIPT.MD"]), 1),
+    ("locations citing a case variant of the manuscript", [], "mock_good.json",
+     lambda d: [r.update(location=str(r["location"]).replace(
+         "manuscript.md", "MANUSCRIPT.MD")) for r in d["values"]], 1),
     # the unavailable source is exempt by its keyed PATH, not its
     # basename: unrelated/wave2_followup.csv names a path the pipeline
     # never reads

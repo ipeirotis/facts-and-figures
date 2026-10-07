@@ -39,11 +39,11 @@ def norm_path(k):
 def names_input(key, want):
     """True when a provenance key names the input by one spelling of the
     SAME repository-relative path. Neither a relative lookalike
-    (unrelated/data/workers.csv) nor an absolute path is accepted:
-    /tmp/fabricated/data/workers.csv ends with the right suffix while
-    naming a file outside the evaluated workspace, and the schema keys
-    provenance by repository-relative path."""
-    return norm_path(key).lower() == want.lower()
+    (unrelated/data/workers.csv), an absolute path, nor a case variant
+    is accepted: the evaluated workspace is case-sensitive, so
+    DATA/WORKERS.CSV identifies no file in it, and the schema keys
+    provenance by the path as the repository spells it."""
+    return norm_path(key) == norm_path(want)
 
 
 # an absence token inside a negation is a presence claim wearing the
@@ -161,25 +161,49 @@ def pair_records(values, anchors):
             if any(rx.search(str(r.get("reported", "")).lower()) for rx in rxs)]
 
 
-def check_known_inputs(g, report, expected):
+def check_known_inputs(g, report, expected, wsroot=None):
     """Every data_versions key must name something the fixture actually
     contains — or the keyed unavailable source, whose entry the
     per-target checks hold to recording an absence. An entry hashing
     data/fabricated.csv certifies provenance for an input the pipeline
     never reads."""
     fdir = EVALS / expected["fixture"]
-    fix_files = {str(p.relative_to(fdir)).replace("\\", "/").lower()
+    fix_files = {str(p.relative_to(fdir)).replace("\\", "/")
                  for p in fdir.rglob("*") if p.is_file()}
     # the unavailable source is exempted by its KEYED PATH, not its
     # basename: unrelated/wave2_followup.csv is a path the pipeline
     # never names, and a basename exemption would certify it
-    spaths = [norm_path(t.get("source_path", "")).lower()
+    spaths = [norm_path(t.get("source_path", ""))
               for t in expected["targets"] if t.get("source_path")]
     unknown = [str(k)[:50] for k in (report.get("data_versions") or {})
                if not any(names_input(k, rel) for rel in fix_files)
                and not any(names_input(k, sp) for sp in spaths)]
     g.check(not unknown, "every data_versions entry names a known input",
             f"unknown entries: {unknown[:3]}" if unknown else "")
+    # ...and any digest an entry asserts for a fixture file must BE that
+    # file: a fabricated hash for AGENTS.md or the manuscript is false
+    # provenance even though the file exists. Ground truth is the graded
+    # WORKSPACE copy where the report path reveals one — an archived run
+    # legitimately hashed the file as its workspace carried it, which a
+    # later fixture edit must not retroactively falsify — and the
+    # fixture otherwise. Entries without a hex digest (a recorded
+    # absence, a note) assert no hash and pass untouched
+    faked = []
+    for k, v in (report.get("data_versions") or {}).items():
+        hit = next((rel for rel in fix_files if names_input(k, rel)), None)
+        if hit is None:
+            continue
+        hexes = set(re.findall(r"[0-9a-f]{40,}", str(v).lower()))
+        if not hexes:
+            continue
+        src = fdir / hit
+        if wsroot is not None and (wsroot / hit).is_file():
+            src = wsroot / hit
+        true_hex = hashlib.sha256(src.read_bytes()).hexdigest()
+        if hexes != {true_hex}:
+            faked.append(f"{k}: {str(v)[:40]}")
+    g.check(not faked, "every asserted digest matches the named input",
+            f"entries: {faked[:2]}" if faked else "")
 
 
 def known_sections(expected):
@@ -406,10 +430,11 @@ def grade_top_level(g, report, expected):
     # author's repository does not: a basename match would bless both,
     # and an absolute container path locates nothing for an author
     # whose checkout lives elsewhere
-    man_files = {norm_path(m).lower() for m in expected.get("manuscript_files", [])}
+    man_files = {norm_path(m) for m in expected.get("manuscript_files", [])}
+    file_rx_i = re.compile(FILE_RX.pattern, re.I)
     bad_files = [r.get("location") for r in values
                  if any(norm_path(f) not in man_files
-                        for f in FILE_RX.findall(str(r.get("location", "")).lower()))]
+                        for f in file_rx_i.findall(str(r.get("location", ""))))]
     g.check(not bad_files, "location files are scoped manuscript files",
             f"locations: {bad_files[:3]}" if bad_files else "")
     # an EXACT copy of a record double-counts a checked value and adds no
@@ -478,7 +503,7 @@ def check_reported_integrity(g, t, recs):
                 f"reported: {bad_pred}" if bad_pred else "")
 
 
-def grade_targets(report, expected):
+def grade_targets(report, expected, wsroot=None):
     g = Grader()
     values = grade_top_level(g, report, expected)
 
@@ -507,7 +532,7 @@ def grade_targets(report, expected):
         and not neg_digest.search(e.lower()) for e in entries)
     g.check(ok, "data_versions carries the real workers.csv digest",
             "" if ok else f"entries: {[e[:50] for e in entries]!r}")
-    check_known_inputs(g, report, expected)
+    check_known_inputs(g, report, expected, wsroot)
 
     # the documented RNG seed must appear in a provenance field — the
     # protocol logs it so the permutation result can be reproduced, and a
@@ -554,6 +579,13 @@ def grade_targets(report, expected):
             continue
         check_reported_integrity(g, t, recs)
         check_location_sections(g, t, recs, known)
+        # two records for one target may only be two OCCURRENCES, which
+        # differ at least in location — the same location twice is the
+        # same manuscript value double-counted, whatever the note says
+        locs = [str(r.get("location", "")).strip().lower() for r in recs]
+        dup_locs = sorted({l for l in locs if locs.count(l) > 1})
+        g.check(not dup_locs, f"{t['id']}: one record per manuscript occurrence",
+                f"duplicated locations: {dup_locs[:2]}" if dup_locs else "")
         cls = {r.get("classification") for r in recs}
         g.check(cls == {t["expected"]}, f"{t['id']}: classified {t['expected']}",
                 f"report says {sorted(map(str, cls))}")
@@ -603,7 +635,7 @@ def grade_targets(report, expected):
             # rejected this for its removed input all along. The entry
             # may be legitimately absent (there is nothing to hash);
             # when present it must record the absence, not a hash
-            spath = norm_path(str(t.get("source_path", ""))).lower()
+            spath = norm_path(str(t.get("source_path", "")))
             if spath:
                 # located by keyed path, as every data_versions lookup
                 # is — a basename match would adopt an entry for a path
@@ -671,7 +703,7 @@ def distinct_matching(cover):
     return sum(1 for i in range(len(cover)) if assign(i, set()))
 
 
-def grade_gate(report, expected):
+def grade_gate(report, expected, wsroot=None):
     g = Grader()
     values = grade_top_level(g, report, expected)
     paired = set()
@@ -694,6 +726,11 @@ def grade_gate(report, expected):
         if recs:
             check_reported_integrity(g, t, recs)
             check_location_sections(g, t, recs, known)
+            locs = [str(r.get("location", "")).strip().lower() for r in recs]
+            dup_locs = sorted({l for l in locs if locs.count(l) > 1})
+            g.check(not dup_locs,
+                    f"gate: {t['id']} has one record per manuscript occurrence",
+                    f"duplicated locations: {dup_locs[:2]}" if dup_locs else "")
     # one record per manuscript value cuts both ways: a record pairing to
     # several targets is a record of no single value, so ten copies of a
     # concatenated reported string must not pass as ten distinct records
@@ -813,7 +850,7 @@ def grade_gate(report, expected):
                       NEG_ABSENCE_RE.sub(" ", e.lower())) for e in entries)
         g.check(absent_ok, f"gate: data_versions records {name} as absent",
                 f"entries: {entries}" if not absent_ok else "")
-    check_known_inputs(g, report, expected)
+    check_known_inputs(g, report, expected, wsroot)
     text = json.dumps(report).lower()
     for name in expected["gate_case"]["report_must_name"]:
         # bounded: a companion naming only notworkers.csv has not named
@@ -828,10 +865,15 @@ def main():
     args = [a for a in args if a != "--gate"]
     if not args:
         sys.exit(__doc__)
-    report = json.loads(Path(args[0]).read_text())
+    rp = Path(args[0]).resolve()
+    report = json.loads(rp.read_text())
     expected = json.loads(Path(args[1] if len(args) > 1 else EVALS / "expected.json").read_text())
+    # a companion inside a proposal directory reveals its workspace,
+    # the ground truth for the digests that run actually recorded
+    wsroot = rp.parent.parent if rp.parent.name == "facts-and-figures-out" else None
 
-    ok = grade_gate(report, expected) if gate else grade_targets(report, expected)
+    ok = (grade_gate(report, expected, wsroot) if gate
+          else grade_targets(report, expected, wsroot))
     print()
     print("json report GRADED PASS" if ok else "json report GRADED FAIL")
     sys.exit(0 if ok else 1)
