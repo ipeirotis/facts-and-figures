@@ -99,10 +99,10 @@ if resolved == os.path.realpath(marker) or lexical == marker:
 if under(lexical, project):
     # a path addressed inside the repository is judged as addressed: a
     # symlink leading into /tmp must not let the scratch exemption rewrite
-    # author data through its repository path
-    lexical_proposal = os.path.normpath(os.path.join(project, out_dir))
-    if safe_root(lexical_proposal) and under(lexical, lexical_proposal):
-        sys.exit(0)
+    # author data through its repository path — and the write must also
+    # RESOLVE inside the proposal directory, or a symlink planted there
+    # (facts-and-figures-out/escape -> ../manuscript.md) escapes the
+    # boundary from within
     if safe_root(proposal) and under(resolved, proposal):
         sys.exit(0)
 else:

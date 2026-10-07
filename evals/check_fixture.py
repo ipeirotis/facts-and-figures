@@ -102,6 +102,13 @@ def main():
                 v = v * t["result_scale"]
             check(abs(v - t["true_value"]) < EPS, f"{tid}: pipeline value equals documented true value",
                   f"pipeline {v!r} vs documented {t['true_value']!r}")
+            # a target whose claim bundles several pipeline outputs (the
+            # group split) documents the others in also_check, so drift in
+            # any bundled value fails the deterministic layer too
+            for extra_key, extra_val in (t.get("also_check") or {}).items():
+                check(abs(results[extra_key] - extra_val) < EPS,
+                      f"{tid}: {extra_key} equals documented value",
+                      f"pipeline {results.get(extra_key)!r} vs documented {extra_val!r}")
 
             if t["kind"] == "predicate":
                 assert t["predicate"] == "less_than"

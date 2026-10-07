@@ -95,6 +95,14 @@ def main():
               write_payload(proj, proj / "data2" / "workers.csv"), proj, want_deny=True)
         shutil.rmtree(scratch_dir, ignore_errors=True)
 
+        # nor must a symlink planted inside the proposal directory escape
+        # the boundary from within
+        (proj / "facts-and-figures-out" / "escape").symlink_to(proj / "manuscript.md")
+        check("marker: write through a proposal-dir symlink to the manuscript denied",
+              write_payload(proj, proj / "facts-and-figures-out" / "escape"), proj,
+              want_deny=True)
+        (proj / "facts-and-figures-out" / "escape").unlink()
+
         # a proposal override that contains the project must not whitelist it
         marker = proj / "facts-and-figures-out" / ".active"
         check("FACTS_AND_FIGURES_OUT=..: manuscript write still denied",

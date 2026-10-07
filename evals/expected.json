@@ -32,6 +32,7 @@
       "boundary": false,
       "anchors": ["20 / 20", "20/20", "20 experienced", "n_experienced"],
       "bundle_expect": [20, 20],
+      "also_check": {"n_inexperienced": 20},
       "note": "the 20-and-20 group split; a record bundling both group counts must carry both"
     },
     {

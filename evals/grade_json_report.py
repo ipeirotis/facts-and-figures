@@ -112,6 +112,14 @@ def grade_top_level(g, report, expected):
         g.check(sorted(map(str, got or [])) == sorted(want_files),
                 "manuscript_files names the scoped manuscript",
                 "" if sorted(map(str, got or [])) == sorted(want_files) else repr(got)[:60])
+    # the top-level pipeline command names THE pipeline (unlike per-record
+    # supplementary commands), so it must at least invoke the canonical
+    # script; output-directory arguments remain legitimate
+    script = str(expected.get("pipeline_command", "")).split()[-1] if expected.get("pipeline_command") else ""
+    if script:
+        got_cmd = str(report.get("pipeline_command", ""))
+        g.check(script in got_cmd, "pipeline_command invokes the canonical pipeline script",
+                "" if script in got_cmd else repr(got_cmd)[:60])
     values = report.get("values") or []
     bad = [i for i, r in enumerate(values)
            if any(not str(r.get(k) or "").strip() for k in RECORD_REQUIRED)]
