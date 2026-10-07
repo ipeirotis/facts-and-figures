@@ -311,6 +311,13 @@ def grade_top_level(g, report, expected):
     got_version = str(report.get("skill_version") or "").strip()
     g.check(got_version == want_version, "skill_version matches the installed skill",
             "" if got_version == want_version else f"report {got_version!r} vs VERSION {want_version!r}")
+    # the container type is part of the schema: an OBJECT keyed by the
+    # filename iterates to the same strings while breaking every
+    # consumer that reads the field as a list of paths
+    mf = report.get("manuscript_files")
+    g.check(isinstance(mf, list) and all(isinstance(x, str) for x in mf or []),
+            "manuscript_files is an array of path strings",
+            "" if isinstance(mf, list) else repr(mf)[:60])
     want_files = expected.get("manuscript_files")
     if want_files:
         # the scoped set must match, but an absolute workspace path that
@@ -434,6 +441,20 @@ def check_reported_integrity(g, t, recs):
     g.check(not negged,
             f"{t['id']}: reported does not negate the manuscript value",
             f"reported: {negged}" if negged else "")
+    # a unary minus reverses the claim as surely as the word "not":
+    # "-71.48" is not the manuscript value 71.48. The guard before the
+    # minus spares a digit, so a range like 6.23-6.32 does not read its
+    # second number as negated
+    mv = t.get("manuscript_value")
+    if not (isinstance(mv, (int, float)) and mv < 0):
+        sign_pats = [re.compile(r"(?<![\d.])-\s*" + anchor_rx(a).pattern)
+                     for a in vals]
+        flipped = [r.get("reported") for r in recs
+                   if any(p.search(str(r.get("reported", "")).lower())
+                          for p in sign_pats)]
+        g.check(not flipped,
+                f"{t['id']}: reported preserves the manuscript value sign",
+                f"reported: {flipped}" if flipped else "")
     # a unit marker contradicting the keyed unit changes the claim the
     # record pairs on: "40%" is not the manuscript claim of 40 workers.
     # Only the contradiction is rejected — most reported values

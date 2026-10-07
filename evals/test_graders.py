@@ -478,6 +478,14 @@ MUTATIONS = [
     ("sample size recast as a percentage", [], "mock_good.json",
      lambda d: [r.update(reported="40%") for r in d["values"]
                 if r.get("reported") == "40"], 1),
+    # a unary minus reverses the claim as surely as the word "not"
+    ("reported value sign-flipped", [], "mock_good.json",
+     lambda d: [r.update(reported="-71.48") for r in d["values"]
+                if r.get("reported") == "71.48"], 1),
+    # the schema's container types bind: an object keyed by the filename
+    # is not an array of paths
+    ("manuscript_files as an object", [], "mock_good.json",
+     lambda d: d.update(manuscript_files={"manuscript.md": True}), 1),
     # a command that merely prints the script name runs nothing
     ("pipeline_command wrapped in echo", [], "mock_good.json",
      lambda d: d.update(pipeline_command="echo analysis/run_analysis.py"), 1),
