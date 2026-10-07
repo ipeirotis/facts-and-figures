@@ -488,6 +488,20 @@ def main():
         check("second checkout manuscript before bootstrap: denied",
               write_payload(w5, w5 / "manuscript.md"), o5, want_deny=True)
 
+        # the same parallel mode bootstrapped from a subdirectory of a git
+        # second checkout: the marker belongs at that checkout's root, or
+        # it drops out of the ancestor scan once the cwd returns there
+        w6 = Path(home_base) / "wt6"
+        (w6 / ".git").mkdir(parents=True)
+        (w6 / "analysis" / "facts-and-figures-out").mkdir(parents=True)
+        check("second checkout, cwd in subdirectory: subdirectory marker denied",
+              write_payload(w6 / "analysis",
+                            w6 / "analysis" / "facts-and-figures-out" / ".active",
+                            content=""), o5, want_deny=True)
+        check("second checkout, cwd in subdirectory: root marker allowed",
+              write_payload(w6 / "analysis", w6 / "facts-and-figures-out" / ".active",
+                            content=""), o5, want_deny=False)
+
         # a session that has entered the proposal directory must still
         # be able to author files there: the raw cwd is a candidate for
         # marker selection but not a root the proposal is judged against

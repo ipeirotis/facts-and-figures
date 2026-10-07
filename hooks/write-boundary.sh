@@ -224,6 +224,32 @@ def bootstrap_checks(cands):
     return hit
 
 
+# a marker belongs at a root: the raw payload cwd is a candidate but not
+# a root, and a marker created in a subdirectory of an enclosing root
+# drops out of the ancestor scan once the cwd returns to that root,
+# leaving the guard inert for the rest of the run. Applied to every
+# bootstrap path; a candidate with no enclosing root (a checkout that is
+# not a git repository, reached only through the cwd) keeps its candidacy
+def refuse_nonroot_marker(cands):
+    for c in cands:
+        if c in roots:
+            continue
+        enclosing = [r for r in roots if r != c and under(c, r)]
+        if not enclosing:
+            continue
+        cm = os.path.join(c, "facts-and-figures-out", ".active")
+        if lexical == cm or resolved == os.path.realpath(cm):
+            deny(
+                "facts-and-figures write boundary: {m} is under the working "
+                "subdirectory {c}, not its root, so the guard would go inert once "
+                "the session returns to the root. Create the run marker at {r} "
+                "instead.".format(
+                    m=cm, c=c,
+                    r=os.path.join(max(enclosing, key=len),
+                                   "facts-and-figures-out", ".active"))
+            )
+
+
 # lexists: a marker that is a broken symlink still arms the guard — with
 # exists() a dangling link would read as absent, the hook would go inert,
 # and the write that recreates the marker could follow the link to create
@@ -233,23 +259,7 @@ if not os.path.lexists(marker):
     # against EVERY candidate root, since with no marker anywhere the
     # selected project is the environment root while the bootstrap may
     # target the worktree the payload cwd names
-    # a marker belongs at a root: the raw payload cwd is a candidate but
-    # not a root, and a marker created under a subdirectory the session
-    # happened to be in drops out of the ancestor scan once the cwd
-    # returns to the root, leaving the guard inert during the run
-    for c in candidates:
-        if c in roots:
-            continue
-        cm = os.path.join(c, "facts-and-figures-out", ".active")
-        if lexical == cm or resolved == os.path.realpath(cm):
-            deny(
-                "facts-and-figures write boundary: {m} is under the working "
-                "subdirectory {c}, not a repository root, so the guard would go "
-                "inert once the session returns to the root. Create the run "
-                "marker at {r} instead.".format(
-                    m=cm, c=c,
-                    r=os.path.join(roots[0], "facts-and-figures-out", ".active"))
-            )
+    refuse_nonroot_marker(candidates)
     bootstrap_checks(candidates)
     sys.exit(0)
 
@@ -264,6 +274,7 @@ if not os.path.lexists(marker):
 cross = [c for c in candidates
          if not os.path.lexists(os.path.join(c, "facts-and-figures-out", ".active"))
          and all(not under(c, m) and not under(m, c) for m in marked)]
+refuse_nonroot_marker(cross)
 if bootstrap_checks(cross):
     sys.exit(0)
 
