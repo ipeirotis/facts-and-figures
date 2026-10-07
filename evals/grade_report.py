@@ -64,15 +64,16 @@ def anchor_lines(lines, anchors):
 
 
 def section_span(report, name):
-    """The text under a contract heading, up to the next contract heading;
-    empty when the heading is missing (grade_sections reports that on its
-    own)."""
+    """The text under a contract heading, up to the next contract heading.
+    Returns None when the heading is missing (grade_sections reports that
+    on its own) — distinct from an empty string for a present-but-empty
+    section, which must NOT fall back to searching the whole report."""
     def heading_rx(s):
         return re.compile(r"(?mi)^\s*(?:#{1,6}|\*\*|\d+\.)\s*(?:\d+\.\s*)?(?:\*\*)?\s*"
                           + re.escape(s) + r"\b")
     m = heading_rx(name).search(report)
     if not m:
-        return ""
+        return None
     ends = []
     for s in SECTIONS:
         if s == name:
@@ -109,15 +110,19 @@ def assertions_for(lines, anchors):
 def grade_targets(report, expected):
     lines = report.splitlines()
     ok = grade_sections(report)
-    idx = report.lower().rfind("author decisions")
-    dlines = (report[idx:] if idx != -1 else "").splitlines()
+    # the decisions span starts at the section HEADING, not the last
+    # textual occurrence of the phrase — prose like "these conclude the
+    # Author decisions" after the items must not empty the span and fail
+    # a valid report
+    decisions_text = section_span(report, "author decisions")
+    dlines = (decisions_text or "").splitlines()
     # the contract puts the value-by-value comparisons under Results, so
     # coverage is judged there — a report shuffling them into another
-    # section while leaving Results empty has not met the contract. With
-    # the heading missing entirely, grade_sections already fails, so the
-    # whole report serves as the span to avoid cascading noise
-    results_lines = section_span(report, "results").splitlines()
-    span = results_lines if results_lines else lines
+    # section while leaving Results empty has not met the contract. Only
+    # a MISSING heading (which grade_sections already fails) falls back
+    # to the whole report; a present-but-empty section stays empty
+    results_text = section_span(report, "results")
+    span = lines if results_text is None else results_text.splitlines()
     for t in expected["targets"]:
         if anchor_lines(span, t["anchors"]):
             print(f"PASS  {t['id']}: covered in the Results section")

@@ -39,15 +39,27 @@ TOP_REQUIRED = ("schema", "skill_version", "manuscript_files", "pipeline_command
                 "environment", "data_versions", "values")
 
 
+def anchor_rx(a):
+    """A numeric anchor must not match inside a larger number: "40" is not
+    a claim found in "140" or "40.5". Digit guards apply only where the
+    anchor itself starts or ends with a digit."""
+    pat = re.escape(a.lower())
+    if a[:1].isdigit():
+        pat = r"(?<![\d.,])" + pat
+    if a[-1:].isdigit():
+        pat = pat + r"(?!\.?\d)"
+    return re.compile(pat)
+
+
 def pair_records(values, anchors):
     """Records covering a target, paired on the `reported` field only. The
     schema requires `reported` to carry the manuscript value verbatim, so a
     record only locatable through its note or location is non-compliant —
     and an earlier free-text fallback let a record pair on a note mention
     while asserting a different value in `reported`."""
-    lowered = [a.lower() for a in anchors]
+    rxs = [anchor_rx(a) for a in anchors]
     return [r for r in values
-            if any(a in str(r.get("reported", "")).lower() for a in lowered)]
+            if any(rx.search(str(r.get("reported", "")).lower()) for rx in rxs)]
 
 
 def computed_matches(computed, target):
@@ -97,9 +109,9 @@ def out_of_scope_ids(values, expected):
     """Records covering a manuscript number the answer key deliberately
     leaves out (the 0-100 scale, the three-month interval) are not strays:
     an agent more thorough than the key must not fail for it."""
-    extra = [a.lower() for a in expected.get("out_of_scope_anchors", [])]
+    rxs = [anchor_rx(a) for a in expected.get("out_of_scope_anchors", [])]
     return {id(r) for r in values
-            if any(a in str(r.get("reported", "")).lower() for a in extra)}
+            if any(rx.search(str(r.get("reported", "")).lower()) for rx in rxs)}
 
 
 class Grader:

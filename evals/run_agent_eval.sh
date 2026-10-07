@@ -133,6 +133,9 @@ if [ -e "$WORK" ] && [ -n "$(ls -A "$WORK" 2>/dev/null)" ] \
     exit 1
 fi
 mkdir -p "$WORK"
+# absolute from here on: the printed manual-fallback commands cd into a
+# workspace and then reference $WORK again, which a relative path breaks
+WORK="$(cd "$WORK" && pwd)"
 touch "$WORK/.fnf-eval-workspace"
 prepare verify
 prepare gated

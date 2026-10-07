@@ -129,6 +129,9 @@ MUTATIONS = [
     ("gate reasons claiming the pipeline succeeded", ["--gate"], "mock_gate.json",
      lambda d: [r.update(reason="the pipeline succeeded and this value is valid")
                 for r in d["values"]], 1),
+    ("sample size reported as 140", [], "mock_good.json",
+     lambda d: [r.update(reported="140") for r in d["values"]
+                if r.get("reported") == "40"], 1),
 ]
 
 
@@ -185,6 +188,14 @@ MD_MUTATIONS = [
          "- One comparison is recorded in the appendix instead.")
      + "\nAppendix: the difference of means, manuscript 6.23 versus pipeline 6.32, "
        "is a mismatch (likely digit transposition).\n", 1),
+    # a present-but-empty Results section must not fall back to searching
+    # the whole report for coverage
+    ("Results heading emptied and moved to the end", "mock_good.md", [],
+     lambda t: t.replace("## Results\n", "## Comparisons\n") + "\n## Results\n", 1),
+    # harmless prose repeating the section name after the items must not
+    # shift the decisions span and fail a valid report
+    ("closing sentence repeating Author decisions", "mock_good.md", [],
+     lambda t: t + "\nThese conclude the Author decisions.\n", 0),
 ]
 
 
