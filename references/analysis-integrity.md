@@ -146,9 +146,12 @@ verification writes nothing of the author's (see the integrity norms
 below), and an author's go-ahead does not change that. Use, in order, a
 read-only or dry-run path the pipeline offers; an output location the
 pipeline lets you redirect into the proposal directory; or a disposable
-checkout inside the proposal directory (`git worktree add` at the logged
-commit, carrying over any uncommitted inputs the run reads, recorded by
-path and content hash), removed at teardown. Log which one ran. When none
+copy inside the proposal directory, made without touching the author's
+repository (`git archive` of the logged commit unpacked there, or a `git
+clone` into it; never `git worktree add`, which writes metadata into the
+author's `.git`), carrying over any uncommitted inputs the run reads,
+recorded by path and content hash, and removed at teardown. Log which one
+ran. When none
 is possible, the values that run would produce are unverifiable: say why
 in `Author decisions` and do not run it.
 
@@ -328,8 +331,8 @@ These bind all three capabilities.
   directory as its single line (`SKILL.md` owns that lifecycle) — and the
   machine-readable companion (`references/verification-report.md`), which
   lives in the selected proposal directory, plus, for a pipeline that
-  writes, the redirected outputs or disposable checkout of step 4, also in
-  the proposal directory, with the checkout removed at teardown. The generative capabilities author new files only, a new
+  writes, the redirected outputs or disposable copy of step 4, also in
+  the proposal directory, with the copy removed at teardown. The generative capabilities author new files only, a new
   plotting or analysis script and its outputs, in a clearly labeled proposal
   location (a directory the author names, or a `facts-and-figures-out/` scratch
   directory); the author's tracked files stay exactly as they were, and a

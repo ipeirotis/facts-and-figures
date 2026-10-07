@@ -144,7 +144,10 @@ output location) plus:
 - **A pinned data snapshot.** A warehouse table is not a file: it can change
   under a query, so "the table" is not a data version. Pin the read durably
   (a BigQuery table snapshot, an object version or generation on cloud
-  storage, a partition key with a fixed as-of date) and record the pin. A
+  storage) and record the pin. A partition key with a fixed as-of date is
+  not a pin by itself, since an ordinary partition can be updated or
+  overwritten; preserve what it returned the same way as a time-travel read
+  below, unless the source guarantees the partition is never rewritten. A
   BigQuery time-travel decorator (`FOR SYSTEM_TIME AS OF`) is not a durable
   pin on its own: it resolves only inside the dataset's time-travel window,
   two to seven days, so a command logged with it alone stops reproducing
