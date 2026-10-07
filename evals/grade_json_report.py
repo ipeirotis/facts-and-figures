@@ -163,10 +163,13 @@ def grade_top_level(g, report, expected):
     env = str(report.get("environment", "")).lower()
     g.check("python" in env, "environment names the interpreter",
             "" if "python" in env else repr(env)[:60])
-    # a location must at least name a place in the manuscript — a filler
-    # string cannot support the promised value-by-value review
-    place_tokens = ("manuscript", "abstract", "data", "results", "method",
-                    "table", "figure", "scope", "author")
+    # a location must name a section-level place the author can look up —
+    # the bare word "manuscript" locates nothing in a document that
+    # repeats numbers across sections. The keyed section itself is not
+    # required: a live run legitimately located a second occurrence of the
+    # group split in Results where the key names Data
+    place_tokens = ("abstract", "data", "results", "method", "table", "figure",
+                    "introduction", "discussion", "appendix", "conclusion")
     bad_locs = [r.get("location") for r in values
                 if not any(tok in str(r.get("location", "")).lower() for tok in place_tokens)]
     g.check(not bad_locs, "record locations identify a manuscript place",

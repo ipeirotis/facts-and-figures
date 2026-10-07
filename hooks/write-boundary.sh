@@ -4,16 +4,18 @@
 # The run marker always lives at <project>/facts-and-figures-out/.active,
 # so the hook can find it without environment coordination. While it
 # exists, Write/Edit/MultiEdit/NotebookEdit calls targeting anything
-# outside the proposal directory or a scratch root are denied; without it
-# the hook is inert and never interferes with ordinary editing sessions.
+# outside the proposal directory are denied; without it the hook is inert
+# and never interferes with ordinary editing sessions. There is no
+# scratch allowance: the protocol authors new files only in the proposal
+# directory, shell-level temp files are not intercepted anyway, and a
+# pipeline input living under /tmp is still an author file.
 #
 # When the author named a different proposal directory, the marker file's
 # single line carries that directory's path (relative to the project), and
 # the hook guards it; the FACTS_AND_FIGURES_OUT environment variable is
 # honored as a fallback for launches configured that way. A proposal
 # directory that equals or contains the project is rejected — it would
-# whitelist the author's tree — as is one reached through a symlink and a
-# scratch root that is not fully disjoint from the project.
+# whitelist the author's tree — as is one reached through a symlink.
 #
 # The payload is parsed straight from stdin: a Write payload carries the
 # whole file content, and routing it through an environment variable or an
@@ -130,18 +132,6 @@ def safe_root(cand):
 # at, with safe_root none the wiser
 proposal_safe = safe_root(proposal) and proposal == proposal_lexical
 
-scratch_roots = []
-for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
-    if not scratch:
-        continue
-    root = os.path.realpath(scratch)
-    # a scratch root must be disjoint from the project: one containing the
-    # project would whitelist the checkout, one inside it (TMPDIR pointed
-    # at data/) would whitelist author files
-    if (project == root or under(project, root) or under(root, project)):
-        continue
-    scratch_roots.append(root)
-
 if lexical == marker:
     # the marker is read-only while a run is armed: it is created before
     # the first command, carrying any custom proposal directory as its
@@ -157,20 +147,14 @@ if lexical == marker:
         "rewriting the marker mid-run.".format(m=marker)
     )
 
-if under(lexical, project):
-    # a path addressed inside the repository is judged as addressed: a
-    # symlink leading into /tmp must not let the scratch exemption rewrite
-    # author data through its repository path — and the write must also
-    # RESOLVE inside the proposal directory, or a symlink planted there
-    # (facts-and-figures-out/escape -> ../manuscript.md) escapes the
-    # boundary from within
-    if proposal_safe and under(resolved, proposal) and not multi_linked(resolved):
-        sys.exit(0)
-else:
-    allowed = ([proposal] if proposal_safe else []) + scratch_roots
-    for root in allowed:
-        if under(resolved, root) and not multi_linked(resolved):
-            sys.exit(0)
+# the one allowance: a write that RESOLVES inside a safe proposal
+# directory. Judging the resolved path defeats symlinks in either
+# direction (a repo path leading out, a proposal path leading back in),
+# and there is no scratch exemption — the protocol authors new files only
+# in the proposal directory, and a disjoint /tmp root would have
+# whitelisted an author input that happens to live there
+if proposal_safe and under(resolved, proposal) and not multi_linked(resolved):
+    sys.exit(0)
 
 deny(
     "facts-and-figures write boundary: a run is active (marker {m}) and {t} is outside "

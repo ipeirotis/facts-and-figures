@@ -112,6 +112,8 @@ MUTATIONS = [
      _fabricated_exempt, 1),
     ("environment reduced to a placeholder", [], "mock_good.json",
      lambda d: d.update(environment="unknown"), 1),
+    ("locations reduced to the bare word manuscript", [], "mock_good.json",
+     lambda d: [r.update(location="manuscript") for r in d["values"]], 1),
 ]
 
 

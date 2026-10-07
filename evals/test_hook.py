@@ -82,8 +82,11 @@ def main():
         check("marker: mid-run marker rewrite denied",
               write_payload(proj, proj / "facts-and-figures-out" / ".active"), proj,
               want_deny=True)
-        check("marker: scratch write under /tmp allowed",
-              write_payload(proj, "/tmp/fnf-scratch.txt"), proj, want_deny=False)
+        # no scratch allowance: the protocol authors new files only in the
+        # proposal directory, and an author input living under /tmp would
+        # otherwise be writable through guarded tools
+        check("marker: scratch write under /tmp denied",
+              write_payload(proj, "/tmp/fnf-scratch.txt"), proj, want_deny=True)
         check("marker: Bash payload ignored",
               {"tool_name": "Bash", "cwd": str(proj), "tool_input": {"command": "ls"}},
               proj, want_deny=False)
