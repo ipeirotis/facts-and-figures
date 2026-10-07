@@ -54,7 +54,7 @@ Register `hooks/write-boundary.sh` as a `PreToolUse` hook in the manuscript repo
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/skills/facts-and-figures/hooks/write-boundary.sh"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/skills/facts-and-figures/hooks/write-boundary.sh"
           }
         ]
       }
@@ -122,6 +122,7 @@ jobs:
         with: {node-version: 22}
       - run: npm install -g @anthropic-ai/claude-code
       - name: run verification
+        shell: bash
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |

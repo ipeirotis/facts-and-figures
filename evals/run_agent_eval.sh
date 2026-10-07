@@ -43,7 +43,7 @@ prepare() {
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/skills/facts-and-figures/hooks/write-boundary.sh"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/skills/facts-and-figures/hooks/write-boundary.sh"
           }
         ]
       }
@@ -53,9 +53,34 @@ prepare() {
 JSON
 }
 
+# hash every workspace file outside the proposal directory and .claude, so
+# a run that writes into the author's tree (results/, edited data) or
+# leaves its marker armed fails the eval behaviorally, not just on paper
+snapshot() {
+    (cd "$1" && find . \( -path ./.claude -o -path ./facts-and-figures-out \) -prune \
+        -o -type f -print0 | sort -z | xargs -0 sha256sum)
+}
+
+workspace_clean() {
+    local ws="$1" pre="$2" label="$3" bad=0
+    if [ -e "$ws/facts-and-figures-out/.active" ]; then
+        echo "FAIL  $label: run marker facts-and-figures-out/.active was not removed"
+        bad=1
+    fi
+    if ! diff <(printf '%s' "$pre") <(snapshot "$ws") > /dev/null; then
+        echo "FAIL  $label: files outside the proposal directory changed during the run:"
+        diff <(printf '%s' "$pre") <(snapshot "$ws") | head -10
+        bad=1
+    fi
+    [ "$bad" -eq 0 ] && echo "PASS  $label: workspace untouched outside the proposal directory, marker removed"
+    return "$bad"
+}
+
 prepare verify
 prepare gated
 rm "$WORK/gated/data/workers.csv"
+PRE_VERIFY="$(snapshot "$WORK/verify")"
+PRE_GATED="$(snapshot "$WORK/gated")"
 
 echo "workspaces prepared under $WORK"
 
@@ -82,6 +107,7 @@ if command -v claude >/dev/null 2>&1; then
         echo "FAIL  verification-report.json was not written to the proposal directory"
         rc=1
     fi
+    workspace_clean "$WORK/verify" "$PRE_VERIFY" "verify case" || rc=1
 
     echo "== running gate case =="
     (cd "$WORK/gated" && claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/gated-report.md"
@@ -96,6 +122,7 @@ if command -v claude >/dev/null 2>&1; then
     else
         echo "note: gate run wrote no JSON companion (permitted on a failed gate)"
     fi
+    workspace_clean "$WORK/gated" "$PRE_GATED" "gate case" || rc=1
 
     exit "$rc"
 else

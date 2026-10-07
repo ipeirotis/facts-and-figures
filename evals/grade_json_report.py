@@ -132,6 +132,10 @@ def grade_targets(report, expected):
             g.check(all(r.get("computed") is None for r in recs),
                     f"{t['id']}: no computed value asserted")
             g.check(all(r.get("reason") for r in recs), f"{t['id']}: reason on every record")
+            must = t.get("reason_must_contain", "")
+            g.check(all(must.lower() in str(r.get("reason", "")).lower() for r in recs),
+                    f"{t['id']}: reason names the missing source",
+                    f"reasons: {[r.get('reason') for r in recs]}" if must else "")
         else:
             # every covering record must be coherent on its own — a correct
             # sibling must not excuse an unverified or unexplained record
@@ -169,6 +173,8 @@ def grade_gate(report, expected):
             "every record is unverifiable after the failed gate",
             str(sorted({str(r.get('classification')) for r in values})))
     g.check(all(r.get("computed") is None for r in values), "no computed values asserted")
+    g.check(not any(r.get("boundary") is True for r in values),
+            "no boundary tie asserted after the failed gate")
     g.check(all(r.get("reason") for r in values), "reason on every record")
     text = json.dumps(report).lower()
     for name in expected["gate_case"]["report_must_name"]:
