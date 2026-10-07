@@ -30,6 +30,11 @@ SCHEMA = "facts-and-figures.verification/1"
 EPS = 1e-6
 
 RECORD_REQUIRED = {"location", "reported", "classification"}
+
+
+def norm_path(k):
+    """One spelling for a provenance path: slashes forward, no ./ prefix."""
+    return re.sub(r"^\./", "", str(k).replace("\\", "/"))
 TOP_REQUIRED = ("schema", "skill_version", "manuscript_files", "pipeline_command",
                 "environment", "data_versions", "values")
 
@@ -155,7 +160,8 @@ def grade_top_level(g, report, expected):
                  if (r.get("classification") == "unverifiable"
                      and (r.get("computed") is not None or not r.get("reason")))
                  or (r.get("classification") in ("match", "mismatch")
-                     and r.get("computed") is None)]
+                     and (r.get("computed") is None or not r.get("tolerance")
+                          or not r.get("producing_command")))]
     g.check(not bad_shape, "conditional fields match each record's classification",
             f"malformed records: {bad_shape[:3]}" if bad_shape else "")
     # the environment field must name the actual runtime, not a
@@ -190,12 +196,8 @@ def grade_targets(report, expected):
     fixture_data = EVALS / expected["fixture"] / "data" / "workers.csv"
     true_hash = hashlib.sha256(fixture_data.read_bytes()).hexdigest()
     want_key = "data/workers.csv"
-
-    def norm(k):
-        return re.sub(r"^\./", "", str(k).replace("\\", "/"))
-
     entries = [str(v) for k, v in (report.get("data_versions") or {}).items()
-               if norm(k) == want_key or norm(k).endswith("/" + want_key)]
+               if norm_path(k) == want_key or norm_path(k).endswith("/" + want_key)]
     ok = bool(entries) and all(true_hash in e for e in entries)
     g.check(ok, "data_versions carries the real workers.csv digest",
             "" if ok else f"entries: {[e[:50] for e in entries]!r}")
@@ -323,8 +325,13 @@ def grade_gate(report, expected):
     # the absence ("present and verified" is not a recorded absence)
     dv = report.get("data_versions") or {}
     for name in expected["gate_case"]["remove"]:
-        base = name.split("/")[-1].lower()
-        entries = [str(v) for k, v in dv.items() if base in str(k).lower()]
+        # locate the entry by normalized path, as the normal-case check
+        # does — a basename substring would accept an absence recorded
+        # for a different file (data/notworkers.csv)
+        want = norm_path(name).lower()
+        entries = [str(v) for k, v in dv.items()
+                   if norm_path(k).lower() == want
+                   or norm_path(k).lower().endswith("/" + want)]
         faked = [e for e in entries if re.search(r"[0-9a-f]{40,}", e.lower())]
         g.check(not faked, f"gate: no digest asserted for removed input {name}",
                 f"entries: {faked}" if faked else "")

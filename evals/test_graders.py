@@ -114,6 +114,13 @@ MUTATIONS = [
      lambda d: d.update(environment="unknown"), 1),
     ("locations reduced to the bare word manuscript", [], "mock_good.json",
      lambda d: [r.update(location="manuscript") for r in d["values"]], 1),
+    ("exempt match record without provenance fields", [], "mock_good.json",
+     lambda d: d["values"].append({"location": "manuscript.md, Data",
+                                   "reported": "0-100", "classification": "match",
+                                   "computed": 999}), 1),
+    ("absence entry keyed to a different file", ["--gate"], "mock_gate.json",
+     lambda d: d.update(data_versions={"data/notworkers.csv":
+                                       d["data_versions"]["data/workers.csv"]}), 1),
 ]
 
 

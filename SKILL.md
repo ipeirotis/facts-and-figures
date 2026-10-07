@@ -60,4 +60,4 @@ Return exactly:
 3. **Results:** complete comparisons or results, including null, adverse, and failed outcomes.
 4. **Author decisions:** proposed values or artifacts, unresolved ambiguities, and what the author must decide before adoption.
 
-Verification additionally writes the machine-readable companion `verification-report.json` into the proposal directory whenever the session can write, carrying the same classifications as the prose; `references/verification-report.md` owns its schema. It stays there like all generated work — the marker is torn down, the report is kept.
+Verification additionally writes the machine-readable companion `verification-report.json` into the proposal directory whenever the session can write, carrying the same classifications as the prose; after a failed gate the companion is optional, and `references/verification-report.md` owns its schema and the failed-gate rules. It stays there like all generated work — the marker is torn down, the report is kept.

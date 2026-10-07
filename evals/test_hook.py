@@ -211,6 +211,22 @@ def main():
         marker.unlink()
         marker.touch()
 
+        # a marker that is a symlink or hard link to a file naming an
+        # author subtree must not have its content trusted as the
+        # proposal root
+        mproj = Path(home_base) / "paper7"
+        (mproj / "facts-and-figures-out").mkdir(parents=True)
+        (mproj / "data").mkdir()
+        (mproj / "data" / "workers.csv").write_text("x\n")
+        (mproj / "redirect.txt").write_text("data\n")
+        (mproj / "facts-and-figures-out" / ".active").symlink_to(mproj / "redirect.txt")
+        check("symlinked marker naming data: data write still denied",
+              write_payload(mproj, mproj / "data" / "workers.csv"), mproj, want_deny=True)
+        (mproj / "facts-and-figures-out" / ".active").unlink()
+        os.link(mproj / "redirect.txt", mproj / "facts-and-figures-out" / ".active")
+        check("hard-linked marker naming data: data write still denied",
+              write_payload(mproj, mproj / "data" / "workers.csv"), mproj, want_deny=True)
+
         # a FIFO planted at the marker path arms the guard but must not be
         # opened: reading it would block until a writer appears, hanging
         # every guarded write

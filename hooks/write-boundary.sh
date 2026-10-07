@@ -91,11 +91,14 @@ if not os.path.lexists(marker):
     sys.exit(0)
 
 try:
-    # only a regular file is read: open() on a FIFO planted at the marker
-    # path would block forever, hanging every guarded write instead of
-    # allowing or denying it
-    if not stat.S_ISREG(os.stat(marker).st_mode):
-        raise OSError("marker is not a regular file")
+    # the marker content is trusted only from a plain, singly linked
+    # regular file at the marker path itself (lstat, not stat): a marker
+    # symlinked or hard-linked to another file carries planted content
+    # that would re-aim the proposal root at an author subtree, and a
+    # FIFO would block the read, hanging every guarded write
+    marker_st = os.lstat(marker)
+    if not stat.S_ISREG(marker_st.st_mode) or marker_st.st_nlink > 1:
+        raise OSError("marker is not a plain regular file")
     with open(marker) as f:
         named = f.readline().strip()
 except Exception:
