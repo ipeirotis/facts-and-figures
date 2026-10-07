@@ -36,6 +36,7 @@ Then ask the agent to verify a manuscript number, regenerate a named figure, or 
 ### Optional: run it as an isolated subagent (Claude Code)
 
 ```bash
+mkdir -p ~/.claude/agents   # the directory does not exist on a fresh install
 cp agents/claude-code/facts-and-figures.md ~/.claude/agents/   # or <project>/.claude/agents/
 ```
 
@@ -212,11 +213,16 @@ jobs:
           # no answer key
           if missing or not vals:
               print('malformed report:', missing or 'no value records'); sys.exit(1)
+          # computed must be a number, or a non-empty numeric array for a
+          # bundled claim — an empty object is a value no consumer can read
+          def num(x): return isinstance(x, (int, float)) and not isinstance(x, bool)
+          def numeric(x): return num(x) or (isinstance(x, list) and x
+                                            and all(num(c) for c in x))
           shapeless = [v for v in vals
                        if not (v.get('location') and v.get('reported')
                                and v.get('classification'))
                        or (v.get('classification') in ('match', 'mismatch')
-                           and (v.get('computed') is None or not v.get('tolerance')
+                           and (not numeric(v.get('computed')) or not v.get('tolerance')
                                 or not v.get('producing_command')))
                        or (v.get('classification') == 'unverifiable'
                            and not v.get('reason'))]

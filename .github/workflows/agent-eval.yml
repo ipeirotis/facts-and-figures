@@ -28,11 +28,13 @@ jobs:
     name: headless eval against the fixture
     runs-on: ubuntu-latest
     # workflow_dispatch lets anyone with write access run the checked-out
-    # eval script — from any branch — with the API key in its reach.
-    # Binding the job to a deployment environment puts that under the
-    # environment's protection rules: store the key as an environment
-    # secret and restrict the environment to main (or require reviewers)
-    # if the repository has collaborators whose branches should not see it
+    # eval script — from any branch — with the API key in its reach. The
+    # ref guard below makes the trusted ref a property of the workflow
+    # itself: a dispatch from any other branch skips before the job
+    # receives the environment or its secret, whatever the environment's
+    # own deployment-branch rules say. The deployment environment remains
+    # the right place for the key (and for required reviewers, if any)
+    if: github.ref == 'refs/heads/main'
     environment: agent-eval
     steps:
       - uses: actions/checkout@v4
