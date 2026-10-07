@@ -144,6 +144,25 @@ def grade_top_level(g, report, expected):
     non_str = [i for i, r in enumerate(values) if not isinstance(r.get("reported"), str)]
     g.check(not non_str, "reported is a verbatim string on every record",
             f"records with non-string reported: {non_str}" if non_str else "")
+    # schema shape holds for every record, in or out of the answer key's
+    # scope: a record exempt from value equality (the 0-100 scale) is not
+    # exempt from the classification enum or its conditional fields
+    bad_cls = [str(r.get("classification")) for r in values
+               if r.get("classification") not in ("match", "mismatch", "unverifiable")]
+    g.check(not bad_cls, "classification within the schema enum on every record",
+            f"outside the enum: {bad_cls[:3]}" if bad_cls else "")
+    bad_shape = [str(r.get("reported"))[:40] for r in values
+                 if (r.get("classification") == "unverifiable"
+                     and (r.get("computed") is not None or not r.get("reason")))
+                 or (r.get("classification") in ("match", "mismatch")
+                     and r.get("computed") is None)]
+    g.check(not bad_shape, "conditional fields match each record's classification",
+            f"malformed records: {bad_shape[:3]}" if bad_shape else "")
+    # the environment field must name the actual runtime, not a
+    # placeholder: "unknown" supports no reproduction
+    env = str(report.get("environment", "")).lower()
+    g.check("python" in env, "environment names the interpreter",
+            "" if "python" in env else repr(env)[:60])
     # a location must at least name a place in the manuscript — a filler
     # string cannot support the promised value-by-value review
     place_tokens = ("manuscript", "abstract", "data", "results", "method",
@@ -177,6 +196,12 @@ def grade_targets(report, expected):
     ok = bool(entries) and all(true_hash in e for e in entries)
     g.check(ok, "data_versions carries the real workers.csv digest",
             "" if ok else f"entries: {[e[:50] for e in entries]!r}")
+
+    # the documented RNG seed must appear in the report's provenance — the
+    # protocol logs it so the permutation result can be reproduced
+    seed = str(expected.get("pipeline_seed", ""))
+    if seed:
+        g.check(seed in json.dumps(report), "the pipeline seed appears in the provenance")
 
     paired = set()
     for t in expected["targets"]:
@@ -255,11 +280,21 @@ def grade_gate(report, expected):
     values = grade_top_level(g, report, expected)
     paired = set()
     cover = []
+    hits = {}
     for t in expected["targets"]:
         recs = pair_records(values, t["anchors"])
         paired.update(id(r) for r in recs)
         cover.append([id(r) for r in recs])
+        for r in recs:
+            hits.setdefault(id(r), [str(r.get("reported"))[:40], 0])
+            hits[id(r)][1] += 1
         g.check(bool(recs), f"gate: {t['id']} covered by a record")
+    # one record per manuscript value cuts both ways: a record pairing to
+    # several targets is a record of no single value, so ten copies of a
+    # concatenated reported string must not pass as ten distinct records
+    multi = [rep for rep, n in hits.values() if n > 1]
+    g.check(not multi, "gate: each record covers exactly one target",
+            f"records spanning several targets: {multi[:2]}" if multi else "")
     # after a failed gate every record shares one classification and a
     # null computed value, so coverage alone cannot tell ten records from
     # one concatenation — each target must have a distinct record of its own

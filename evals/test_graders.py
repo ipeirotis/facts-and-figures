@@ -65,6 +65,22 @@ def _scalar_bundle(d):
             r["computed"] = 20
 
 
+def _ten_concatenated(d):
+    """Ten copies of a record whose reported string concatenates every
+    anchor form a perfect matching, but no copy is a record of any single
+    manuscript value."""
+    merged = dict(d["values"][0])
+    merged["reported"] = "; ".join(str(r.get("reported", "")) for r in d["values"])
+    d["values"] = [dict(merged) for _ in range(len(d["values"]))]
+
+
+def _fabricated_exempt(d):
+    """A record exempt from answer-key equality (an out-of-scope anchor)
+    still owes the schema its classification enum."""
+    d["values"].append({"location": "manuscript.md, Data", "reported": "0-100 scale",
+                        "classification": "fabricated", "computed": 999})
+
+
 def _renamed_data_key(d):
     """A legitimate alternative spelling of the hashed input's path must
     still pass: the schema requires the actual path, not one dictionary
@@ -90,37 +106,60 @@ MUTATIONS = [
      _merged_plus_duplicates, 1),
     ("scalar computed for the bundled group split", [], "mock_good.json",
      _scalar_bundle, 1),
+    ("ten concatenated records forming a fake matching", ["--gate"], "mock_gate.json",
+     _ten_concatenated, 1),
+    ("fabricated classification on an exempt record", [], "mock_good.json",
+     _fabricated_exempt, 1),
+    ("environment reduced to a placeholder", [], "mock_good.json",
+     lambda d: d.update(environment="unknown"), 1),
 ]
 
 
-# line-level corruptions of the passing prose mock that grade_report.py
-# must reject: (label, original line, replacement)
+def _replacing(original, replacement):
+    return lambda t: t.replace(original, replacement)
+
+
+def _absence_words_removed(text):
+    """A gate report that names the input but never states it is absent
+    must fail — 'gate' was once an accepted term and is auto-satisfied by
+    the mandatory Scope and gate heading."""
+    for a, b in (("not found", "located"), ("Not found", "Located"),
+                 ("missing", "pending"), ("Missing", "Pending"),
+                 ("unreachable", "reachable"), ("absent", "present")):
+        text = text.replace(a, b)
+    return text
+
+
+# text-level corruptions of a passing prose mock that grade_report.py must
+# reject: (label, mock file, extra args, text transform)
 MD_MUTATIONS = [
-    ("misdirected boundary",
+    ("misdirected boundary", "mock_good.md", [], _replacing(
      "The flagged share sits exactly on the rounding boundary; confirm the intended convention.",
-     "There are no boundary concerns for the overall mean 71.48."),
-    ("mismatch dropped from Author decisions",
+     "There are no boundary concerns for the overall mean 71.48.")),
+    ("mismatch dropped from Author decisions", "mock_good.md", [], _replacing(
      "The reported difference 6.23 disagrees with the pipeline's 6.32; decide whether to correct both occurrences.",
-     "Decide whether any corrections are needed."),
-    ("unverifiable dropped from Author decisions",
+     "Decide whether any corrections are needed.")),
+    ("unverifiable dropped from Author decisions", "mock_good.md", [], _replacing(
      "The 64% retention could not be verified from the distributed data; confirm it against the restricted source or state that it is not reproducible.",
-     "One value remains for you to confirm against the restricted source."),
+     "One value remains for you to confirm against the restricted source.")),
+    ("absence terms removed from the gate report", "mock_gate.md", ["--gate"],
+     _absence_words_removed),
 ]
 
 
 def md_mutation_cases():
-    text = (TESTS / "mock_good.md").read_text()
     failures = 0
-    for label, original, replacement in MD_MUTATIONS:
-        mutated = text.replace(original, replacement)
-        assert mutated != text, f"mock_good.md line changed; update MD_MUTATIONS ({label})"
+    for label, mock, extra, transform in MD_MUTATIONS:
+        text = (TESTS / mock).read_text()
+        mutated = transform(text)
+        assert mutated != text, f"{mock} text changed; update MD_MUTATIONS ({label})"
         f = tempfile.NamedTemporaryFile("w", suffix=".md", delete=False)
         f.write(mutated)
         f.close()
-        proc = run_grader("grade_report.py", [], Path(f.name))
+        proc = run_grader("grade_report.py", extra, Path(f.name))
         Path(f.name).unlink()
         ok = proc.returncode == 1
-        print(f"{'PASS' if ok else 'FAIL'}  grade_report.py mock_good.md with {label}: "
+        print(f"{'PASS' if ok else 'FAIL'}  grade_report.py {' '.join(extra)} {mock} with {label}: "
               f"exit {proc.returncode}, want 1")
         if not ok:
             print(proc.stdout)

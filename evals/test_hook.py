@@ -29,8 +29,10 @@ def run_hook(payload, project, extra_env=None):
     env.pop("FACTS_AND_FIGURES_OUT", None)
     env.update(extra_env or {})
     data = payload if isinstance(payload, str) else json.dumps(payload)
+    # a hard timeout so a hook regression that blocks (a FIFO marker made
+    # open() wait for a writer) fails the suite loudly instead of hanging it
     return subprocess.run(["bash", str(HOOK)], input=data, env=env,
-                          capture_output=True, text=True)
+                          capture_output=True, text=True, timeout=15)
 
 
 def check(label, payload, project, want_deny, extra_env=None):
@@ -205,6 +207,18 @@ def main():
               write_payload(proj, marker), proj, want_deny=True)
         marker.unlink()
         marker.touch()
+
+        # a FIFO planted at the marker path arms the guard but must not be
+        # opened: reading it would block until a writer appears, hanging
+        # every guarded write
+        fproj = Path(home_base) / "paper6"
+        (fproj / "facts-and-figures-out").mkdir(parents=True)
+        os.mkfifo(fproj / "facts-and-figures-out" / ".active")
+        check("FIFO marker: guard armed, outside write denied without hanging",
+              write_payload(fproj, fproj / "notes.md"), fproj, want_deny=True)
+        check("FIFO marker: proposal-directory write still allowed",
+              write_payload(fproj, fproj / "facts-and-figures-out" / "s.py"), fproj,
+              want_deny=False)
 
         # a scratch root inside the project must not whitelist author files
         (proj / "data").mkdir(exist_ok=True)

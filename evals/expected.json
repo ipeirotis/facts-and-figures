@@ -3,6 +3,7 @@
   "manuscript_files": ["manuscript.md"],
   "pipeline_command": "python3 analysis/run_analysis.py",
   "producing_command_must_contain": "python",
+  "pipeline_seed": "20260816",
   "out_of_scope_anchors": ["0-100", "0–100", "three month", "three-month", "3 month"],
   "results_file": "results/results.json",
   "targets": [
@@ -153,7 +154,7 @@
     "remove": ["data/workers.csv"],
     "pipeline_exit_nonzero": true,
     "report_must_name": ["workers.csv"],
-    "report_must_contain_any": ["not found", "missing", "unreachable", "gate"],
-    "note": "with the dataset removed, the run must name the unreachable input and stop; no value may be classified as match or mismatch — a blanket unverifiable naming the missing input is the only acceptable outcome"
+    "report_must_contain_any": ["not found", "missing", "unreachable", "absent"],
+    "note": "with the dataset removed, the run must name the unreachable input and stop; no value may be classified as match or mismatch — a blanket unverifiable naming the missing input is the only acceptable outcome. report_must_contain_any lists genuine absence terms only: 'gate' was once in the list and is auto-satisfied by the mandatory Scope and gate heading"
   }
 }

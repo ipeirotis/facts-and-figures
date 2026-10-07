@@ -89,6 +89,11 @@ if not os.path.lexists(marker):
     sys.exit(0)
 
 try:
+    # only a regular file is read: open() on a FIFO planted at the marker
+    # path would block forever, hanging every guarded write instead of
+    # allowing or denying it
+    if not stat.S_ISREG(os.stat(marker).st_mode):
+        raise OSError("marker is not a regular file")
     with open(marker) as f:
         named = f.readline().strip()
 except Exception:
