@@ -198,9 +198,14 @@ jobs:
           import json, sys
           r = json.load(open('facts-and-figures-out/verification-report.json'))
           # shape before policy: a malformed companion must not pass the
-          # gate on records that carry a classification and nothing else
-          missing = [k for k in ('schema', 'manuscript_files', 'pipeline_command',
-                                 'environment', 'data_versions') if not r.get(k)]
+          # gate on records that carry a classification and nothing else,
+          # and the schema identifier is fixed — any other value is a
+          # format this gate does not understand
+          if r.get('schema') != 'facts-and-figures.verification/1':
+              print('unknown schema:', r.get('schema')); sys.exit(1)
+          missing = [k for k in ('skill_version', 'manuscript_files',
+                                 'pipeline_command', 'environment',
+                                 'data_versions') if not r.get(k)]
           vals = r.get('values') or []
           # an empty report verified nothing; completeness beyond that is
           # your spot check against the manuscript, since a real paper has

@@ -457,6 +457,12 @@ MUTATIONS = [
     ("locations by bare section", [], "mock_good.json",
      lambda d: [r.update(location=str(r["location"]).replace(
          "manuscript.md, ", "")) for r in d["values"]], 0),
+    # a manuscript basename inside an unscoped container is a different
+    # document — the full path must match the scoped entry
+    ("locations citing the manuscript under /tmp", [], "mock_good.json",
+     lambda d: [r.update(location=str(r["location"]).replace(
+         "manuscript.md", "/tmp/fabricated/manuscript.md"))
+                for r in d["values"]], 1),
     # a command that merely prints the script name runs nothing
     ("pipeline_command wrapped in echo", [], "mock_good.json",
      lambda d: d.update(pipeline_command="echo analysis/run_analysis.py"), 1),

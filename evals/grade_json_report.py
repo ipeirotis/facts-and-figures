@@ -393,13 +393,15 @@ def grade_top_level(g, report, expected):
     g.check(not bad_locs, "record locations identify a manuscript place",
             f"unusable locations: {bad_locs[:3]}" if bad_locs else "")
     # a location may locate by section alone, as the live runs did, but
-    # any FILE it names must be a scoped manuscript file — a location of
-    # "fabricated.tex, Results" certifies traceability to a document the
-    # scope does not contain
-    man_files = {norm_path(m).split("/")[-1].lower()
-                 for m in expected.get("manuscript_files", [])}
+    # any FILE it names must be a scoped manuscript file BY FULL PATH —
+    # "fabricated.tex, Results" names a document the scope does not
+    # contain, and "/tmp/fabricated/manuscript.md" a container the
+    # author's repository does not: a basename match would bless both,
+    # and an absolute container path locates nothing for an author
+    # whose checkout lives elsewhere
+    man_files = {norm_path(m).lower() for m in expected.get("manuscript_files", [])}
     bad_files = [r.get("location") for r in values
-                 if any(f.split("/")[-1] not in man_files
+                 if any(norm_path(f) not in man_files
                         for f in FILE_RX.findall(str(r.get("location", "")).lower()))]
     g.check(not bad_files, "location files are scoped manuscript files",
             f"locations: {bad_files[:3]}" if bad_files else "")

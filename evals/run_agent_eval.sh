@@ -238,6 +238,19 @@ if command -v claude >/dev/null 2>&1; then
     # lockout exists to hide
     echo "== running verification case =="
     (cd "$WORK/verify" && env -u OLDPWD claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/verify-report.md"
+    # the completed case is sealed while the gate agent runs: a sibling
+    # workspace with pre-approved Bash could read the first run's report
+    # (disclosing the computed values this case must find independently)
+    # or rewrite its companion inside the proposal directory, where the
+    # integrity snapshot permits writes. Appended to LOCK_DIRS so the
+    # EXIT trap restores it even if the gate run dies
+    for sealed in "$WORK/verify" "$WORK/verify-report.md"; do
+        if [ -e "$sealed" ]; then
+            LOCK_DIRS+=("$sealed")
+            LOCK_MODES+=("$(dir_mode "$sealed")")
+            chmod 000 "$sealed"
+        fi
+    done
     echo "== running gate case =="
     (cd "$WORK/gated" && env -u OLDPWD claude -p "$PROMPT" "${CLAUDE_ARGS[@]}") | tee "$WORK/gated-report.md"
     restore_key
