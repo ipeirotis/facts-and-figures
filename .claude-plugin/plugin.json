@@ -10,6 +10,6 @@
   "repository": "https://github.com/ipeirotis/facts-and-figures",
   "license": "MIT",
   "keywords": ["reproducibility", "verification", "academic", "manuscript", "analysis", "figures"],
-  "skills": ".",
+  "skills": "./",
   "agents": ["./agents/claude-code/facts-and-figures.md"]
 }

@@ -36,7 +36,17 @@ def run_hook(payload, project, extra_env=None):
 def check(label, payload, project, want_deny, extra_env=None):
     global failures
     proc = run_hook(payload, project, extra_env)
-    denied = '"deny"' in proc.stdout
+    # a denial is only the exact decision shape Claude Code acts on, not
+    # any output that happens to contain the word "deny"
+    denied = False
+    if proc.stdout.strip():
+        try:
+            out = json.loads(proc.stdout)
+            hso = out.get("hookSpecificOutput", {})
+            denied = (hso.get("hookEventName") == "PreToolUse"
+                      and hso.get("permissionDecision") == "deny")
+        except ValueError:
+            denied = False
     ok = proc.returncode == 0 and denied == want_deny
     print(f"{'PASS' if ok else 'FAIL'}  {label}"
           + ("" if ok else f"  (exit {proc.returncode}, denied={denied}, want deny={want_deny})"))
@@ -76,6 +86,14 @@ def main():
         check("marker: 300 KiB write outside still denied (stdin, no E2BIG)",
               write_payload(proj, proj / "manuscript.md", content="A" * 300_000),
               proj, want_deny=True)
+
+        # a symlink inside the repository must not route author-path writes
+        # into the scratch exemption
+        scratch_dir = Path(tempfile.mkdtemp(prefix="fnf-symlink-target."))
+        (proj / "data2").symlink_to(scratch_dir)
+        check("marker: write through an in-repo symlink into /tmp denied",
+              write_payload(proj, proj / "data2" / "workers.csv"), proj, want_deny=True)
+        shutil.rmtree(scratch_dir, ignore_errors=True)
 
         # a proposal override that contains the project must not whitelist it
         marker = proj / "facts-and-figures-out" / ".active"

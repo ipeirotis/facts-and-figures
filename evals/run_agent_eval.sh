@@ -59,11 +59,15 @@ JSON
 
 # hash every workspace file outside the proposal directory, including the
 # .claude configuration and installed skill (a run that tampers with its
-# own guard must fail), so a run that writes into the author's tree or
-# leaves its marker armed fails the eval behaviorally, not just on paper
+# own guard must fail), and record every entry's type and symlink target,
+# so a run that plants a symlink, FIFO, or directory in the author's tree
+# fails the eval behaviorally, not just on paper
 snapshot() {
-    (cd "$1" && find . -path ./facts-and-figures-out -prune \
-        -o -type f -print0 | sort -z | xargs -0 sha256sum)
+    (cd "$1" \
+        && find . -path ./facts-and-figures-out -prune -o -type f -print0 \
+            | sort -z | xargs -0 -r sha256sum \
+        && find . -path ./facts-and-figures-out -prune -o -printf '%y %p -> %l\n' \
+            | sort)
 }
 
 workspace_clean() {

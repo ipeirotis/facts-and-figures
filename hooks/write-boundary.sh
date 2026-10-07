@@ -67,16 +67,21 @@ if not target:
     sys.exit(0)
 
 cwd = payload.get("cwd") or project
-resolved = os.path.realpath(os.path.join(cwd, os.path.expanduser(target)))
+lexical = os.path.normpath(os.path.join(cwd, os.path.expanduser(target)))
+resolved = os.path.realpath(lexical)
 
-allowed = []
-# the proposal directory is allowed unless it equals or contains the
-# project, where a path like ".." would whitelist the whole tree; under a
-# custom proposal, only the marker file itself stays writable in the
-# default directory, so generated work cannot land outside the directory
-# the author chose
-if proposal != project and not project.startswith(proposal + os.sep):
-    allowed.append(proposal)
+
+def under(path, root):
+    return path == root or path.startswith(root + os.sep)
+
+
+# a directory is a safe allowance only if it neither equals nor contains
+# the project, where a path like ".." would whitelist the whole tree
+def safe_root(cand):
+    return cand != project and not under(project, cand)
+
+
+scratch_roots = []
 for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
     if not scratch:
         continue
@@ -84,16 +89,27 @@ for scratch in ("/tmp", os.environ.get("TMPDIR") or ""):
     # a scratch root must be disjoint from the project: one containing the
     # project would whitelist the checkout, one inside it (TMPDIR pointed
     # at data/) would whitelist author files
-    if (project == root or project.startswith(root + os.sep)
-            or root.startswith(project + os.sep)):
+    if (project == root or under(project, root) or under(root, project)):
         continue
-    allowed.append(root)
+    scratch_roots.append(root)
 
-if resolved == os.path.realpath(marker):
+if resolved == os.path.realpath(marker) or lexical == marker:
     sys.exit(0)
-for root in allowed:
-    if resolved == root or resolved.startswith(root + os.sep):
+
+if under(lexical, project):
+    # a path addressed inside the repository is judged as addressed: a
+    # symlink leading into /tmp must not let the scratch exemption rewrite
+    # author data through its repository path
+    lexical_proposal = os.path.normpath(os.path.join(project, out_dir))
+    if safe_root(lexical_proposal) and under(lexical, lexical_proposal):
         sys.exit(0)
+    if safe_root(proposal) and under(resolved, proposal):
+        sys.exit(0)
+else:
+    allowed = ([proposal] if safe_root(proposal) else []) + scratch_roots
+    for root in allowed:
+        if under(resolved, root):
+            sys.exit(0)
 
 reason = (
     "facts-and-figures write boundary: a run is active (marker {m}) and {t} is outside "
