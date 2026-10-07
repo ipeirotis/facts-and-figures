@@ -216,6 +216,10 @@ MUTATIONS = [
     ("reported value negated", [], "mock_good.json",
      lambda d: [r.update(reported="not 71.48") for r in d["values"]
                 if r.get("reported") == "71.48"], 1),
+    # ...and predicate syntax must not break the negation span
+    ("reported predicate negated", [], "mock_good.json",
+     lambda d: [r.update(reported="not p < 0.001") for r in d["values"]
+                if r.get("reported") == "p < 0.001"], 1),
     # the manuscript's actual Data wording is verbatim-compliant and
     # must pair with the group-split target
     ("group-split reported with the manuscript wording", [], "mock_good.json",

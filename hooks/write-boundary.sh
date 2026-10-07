@@ -149,21 +149,22 @@ def deny(reason):
     sys.exit(0)
 
 
-# lexists: a marker that is a broken symlink still arms the guard — with
-# exists() a dangling link would read as absent, the hook would go inert,
-# and the write that recreates the marker could follow the link to create
-# an author file outside the proposal directory
-if not os.path.lexists(marker):
-    # inert without the marker — except for the one write the protocol
-    # makes while unarmed, the marker bootstrap itself: that write must
-    # resolve to the marker path, or a default directory that is already
-    # a symlink routes the marker creation into an author directory. The
-    # check covers both spellings — the marker path itself, and a write
-    # addressed straight at the redirect target it resolves to — and runs
-    # against EVERY candidate root, since with no marker anywhere the
-    # selected project is the environment root while the bootstrap may
-    # target the worktree the payload cwd names
-    for c in candidates:
+def under(path, root):
+    return path == root or path.startswith(root + os.sep)
+
+
+# the one write the protocol makes before arming: the marker bootstrap.
+# That write must resolve to the canonical marker path — a default
+# directory that is already a symlink routes the creation into an author
+# directory and is denied — and a custom directory named as the content
+# line must start fresh: pointing it at an EXISTING, NON-EMPTY directory
+# would hand pre-existing author content (data/, analysis/) to the write
+# allowance. Validated by either spelling, since an alias symlink to the
+# REAL marker directory resolves to the canonical marker too. Returns
+# True when this write IS a valid bootstrap for one of cands
+def bootstrap_checks(cands):
+    hit = False
+    for c in cands:
         cm = os.path.join(c, "facts-and-figures-out", ".active")
         cm_real = os.path.realpath(cm)
         if (lexical == cm or resolved == cm_real) and cm_real != cm:
@@ -173,19 +174,9 @@ if not os.path.lexists(marker):
                 "the run marker there would land outside the proposal directory. "
                 "Replace facts-and-figures-out with a real directory first.".format(m=cm)
             )
-    # the bootstrap write may name a custom proposal directory as its
-    # first line. A name pointing at an EXISTING, NON-EMPTY directory
-    # would hand pre-existing author content (data/, analysis/) to the
-    # write allowance, so it is refused at creation: the proposal
-    # directory starts fresh
-    for c in candidates:
-        cm = os.path.join(c, "facts-and-figures-out", ".active")
-        cm_real = os.path.realpath(cm)
-        # the validation applies by either spelling: a write through an
-        # alias symlink to the REAL marker directory resolves to the
-        # canonical marker and must not skip the fresh-directory rule
         if cm_real != cm or (lexical != cm and resolved != cm):
             continue
+        hit = True
         lines = str(tool_input.get("content") or "").splitlines()
         line = lines[0].strip() if lines else ""
         if not line or "\x00" in line or len(line) > 4096:
@@ -206,6 +197,33 @@ if not os.path.lexists(marker):
                 "fresh: name a new or empty directory (or use the default), never an "
                 "existing data, code, or figure directory.".format(d=named_dir)
             )
+    return hit
+
+
+# lexists: a marker that is a broken symlink still arms the guard — with
+# exists() a dangling link would read as absent, the hook would go inert,
+# and the write that recreates the marker could follow the link to create
+# an author file outside the proposal directory
+if not os.path.lexists(marker):
+    # inert without the marker — except for the bootstrap, validated
+    # against EVERY candidate root, since with no marker anywhere the
+    # selected project is the environment root while the bootstrap may
+    # target the worktree the payload cwd names
+    bootstrap_checks(candidates)
+    sys.exit(0)
+
+# the documented parallel mode runs one checkout per run: with an armed
+# original checkout and a stale CLAUDE_PROJECT_DIR, the second checkout
+# must still be able to create its OWN marker. A write targeting the
+# canonical marker path of an unmarked candidate root that is DISJOINT
+# from every marked root is that bootstrap — validated by the same
+# rules — not an outside write of the armed run. Disjointness keeps the
+# armed tree closed: a nested or enclosing directory of a marked root
+# never qualifies
+cross = [c for c in candidates
+         if not os.path.lexists(os.path.join(c, "facts-and-figures-out", ".active"))
+         and all(not under(c, m) and not under(m, c) for m in marked)]
+if bootstrap_checks(cross):
     sys.exit(0)
 
 try:
@@ -235,10 +253,6 @@ if "\x00" in named or len(named) > 4096:
 out_dir = named or "facts-and-figures-out"
 proposal_lexical = os.path.normpath(os.path.join(project, out_dir))
 proposal = os.path.realpath(proposal_lexical)
-
-
-def under(path, root):
-    return path == root or path.startswith(root + os.sep)
 
 
 # a hard link shares its inode: a proposal file linked to the manuscript

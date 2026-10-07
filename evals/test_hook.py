@@ -449,6 +449,27 @@ def main():
               write_payload(p9, p9 / "alias" / ".active", content="fresh9\n"),
               p9, want_deny=False)
 
+        # the documented parallel mode: with an armed original checkout
+        # and a stale environment root, a disjoint second checkout must
+        # still be able to bootstrap its OWN marker — under the same
+        # validations — while its author files stay denied until it does
+        o5 = Path(home_base) / "orig5"
+        (o5 / "facts-and-figures-out").mkdir(parents=True)
+        (o5 / "facts-and-figures-out" / ".active").touch()
+        w5 = Path(home_base) / "wt5"
+        w5.mkdir()
+        (w5 / "data").mkdir()
+        (w5 / "data" / "workers.csv").write_text("id\n1\n")
+        (w5 / "manuscript.md").write_text("# Title\n")
+        check("second checkout bootstrap while another is armed: allowed",
+              write_payload(w5, w5 / "facts-and-figures-out" / ".active",
+                            content=""), o5, want_deny=False)
+        check("second checkout bootstrap naming data: denied",
+              write_payload(w5, w5 / "facts-and-figures-out" / ".active",
+                            content="data\n"), o5, want_deny=True)
+        check("second checkout manuscript before bootstrap: denied",
+              write_payload(w5, w5 / "manuscript.md"), o5, want_deny=True)
+
         # a session that has entered the proposal directory must still
         # be able to author files there: the raw cwd is a candidate for
         # marker selection but not a root the proposal is judged against

@@ -302,10 +302,12 @@ def grade_targets(report, expected):
             g.check(False, f"{t['id']}: a record covers it", f"no record mentions {t['anchors']}")
             continue
         # a negated wrapper denies the claim it pairs on: "not 71.48"
-        # reproduces nothing, while the unchanged computed value would
-        # bless the denial
+        # and "not p < 0.001" reproduce nothing, while the unchanged
+        # computed value would bless the denial. The gap tolerates any
+        # tokens, not only words — a predicate operator between the
+        # negator and the value must not break the span
         vals = [a for a in t["anchors"] if any(c.isdigit() for c in a)] or t["anchors"]
-        neg_pats = [re.compile(r"\b(?:not|never|no|isn.?t|wasn.?t)\s+(?:\w+\s+){0,2}?"
+        neg_pats = [re.compile(r"\b(?:not|never|no|isn.?t|wasn.?t)\s+(?:\S+\s+){0,3}?"
                                + anchor_rx(a).pattern) for a in vals]
         negged = [r.get("reported") for r in recs
                   if any(p.search(str(r.get("reported", "")).lower()) for p in neg_pats)]
