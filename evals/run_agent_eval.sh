@@ -129,12 +129,20 @@ fi
 WORK="${1:-$(mktemp -d /tmp/fnf-eval.XXXXXX)}"
 # refuse a populated directory this harness did not create: prepare()
 # recursively removes verify/ and gated/ inside it, so pointing the
-# harness at "." or "/" must not erase unrelated directories
-if [ -e "$WORK" ] && [ -n "$(ls -A "$WORK" 2>/dev/null)" ] \
-        && [ ! -e "$WORK/.fnf-eval-workspace" ]; then
-    echo "refusing to use $WORK: it is not empty and was not created by this harness" >&2
-    echo "pass a new or empty directory (or omit the argument for a temp one)" >&2
-    exit 1
+# harness at "." or "/" must not erase unrelated directories. A
+# directory that EXISTS but cannot be listed fails closed — a discarded
+# ls error would otherwise read a populated, unreadable directory as
+# empty and hand it to the recursive removal
+if [ -e "$WORK" ]; then
+    if ! work_listing="$(ls -A "$WORK" 2>/dev/null)"; then
+        echo "refusing to use $WORK: it exists but cannot be listed" >&2
+        exit 1
+    fi
+    if [ -n "$work_listing" ] && [ ! -e "$WORK/.fnf-eval-workspace" ]; then
+        echo "refusing to use $WORK: it is not empty and was not created by this harness" >&2
+        echo "pass a new or empty directory (or omit the argument for a temp one)" >&2
+        exit 1
+    fi
 fi
 mkdir -p "$WORK"
 # absolute from here on: the printed manual-fallback commands cd into a

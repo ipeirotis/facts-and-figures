@@ -301,6 +301,17 @@ def grade_targets(report, expected):
         if not recs:
             g.check(False, f"{t['id']}: a record covers it", f"no record mentions {t['anchors']}")
             continue
+        # a negated wrapper denies the claim it pairs on: "not 71.48"
+        # reproduces nothing, while the unchanged computed value would
+        # bless the denial
+        vals = [a for a in t["anchors"] if any(c.isdigit() for c in a)] or t["anchors"]
+        neg_pats = [re.compile(r"\b(?:not|never|no|isn.?t|wasn.?t)\s+(?:\w+\s+){0,2}?"
+                               + anchor_rx(a).pattern) for a in vals]
+        negged = [r.get("reported") for r in recs
+                  if any(p.search(str(r.get("reported", "")).lower()) for p in neg_pats)]
+        g.check(not negged,
+                f"{t['id']}: reported does not negate the manuscript value",
+                f"reported: {negged}" if negged else "")
         # a predicate claim is irreducibly its operator and threshold:
         # "p > 0.001", "p = 0.001" and a bare "0.001" all pair on the
         # number while reversing, altering, or dropping the manuscript

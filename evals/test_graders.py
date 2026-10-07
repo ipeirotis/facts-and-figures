@@ -211,6 +211,17 @@ MUTATIONS = [
      lambda d: [r.update(reason="data/wave2_followup.csv is present and verified")
                 for r in d["values"]
                 if r.get("classification") == "unverifiable"], 1),
+    # a negated wrapper around the manuscript value denies the claim it
+    # pairs on
+    ("reported value negated", [], "mock_good.json",
+     lambda d: [r.update(reported="not 71.48") for r in d["values"]
+                if r.get("reported") == "71.48"], 1),
+    # the manuscript's actual Data wording is verbatim-compliant and
+    # must pair with the group-split target
+    ("group-split reported with the manuscript wording", [], "mock_good.json",
+     lambda d: [r.update(reported="20 with prior platform experience and 20 without")
+                for r in d["values"]
+                if r.get("reported") == "20 / 20"], 0),
     # a gate reason citing only the optional wave-2 source manufactures
     # failure provenance for the nine targets the gate did not block
     # through it

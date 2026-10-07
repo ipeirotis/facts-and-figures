@@ -143,6 +143,10 @@ jobs:
           # itself needs scrubbed credentials.
           CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
         run: |
+          # redundant with the declared shell's -eo pipefail, kept
+          # explicit so a failing claude exit still fails the step when
+          # this block is copied into a workflow that drops shell: bash
+          set -o pipefail
           # the prose capture goes to RUNNER_TEMP, not the checkout root:
           # a shell redirect bypasses the write-boundary hook, and a paper
           # repository may own a file by this name

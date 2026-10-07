@@ -31,7 +31,7 @@
       "kind": "point",
       "expected": "match",
       "boundary": false,
-      "anchors": ["20 / 20", "20/20", "20 experienced", "n_experienced"],
+      "anchors": ["20 / 20", "20/20", "20 experienced", "n_experienced", "20 with prior platform experience and 20 without"],
       "bundle_expect": [20, 20],
       "also_check": {"n_inexperienced": 20},
       "note": "the 20-and-20 group split; a record bundling both group counts must carry both"
