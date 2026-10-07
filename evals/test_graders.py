@@ -379,6 +379,24 @@ MUTATIONS = [
     # location of nonexistent documents certifies no traceability
     ("locations replaced by section-named files", [], "mock_good.json",
      lambda d: [r.update(location="results.md") for r in d["values"]], 1),
+    # the same stem under a different extension is a file the fixture
+    # does not contain — the keyed basename must match exactly
+    ("missing-source reason citing a different extension", [], "mock_good.json",
+     lambda d: [r.update(reason="data/wave2_followup.txt is missing "
+                                "from the distribution")
+                for r in d["values"]
+                if r.get("classification") == "unverifiable"], 1),
+    ("gate wave-2 reason citing a different extension", ["--gate"],
+     "mock_gate.json",
+     lambda d: [r.update(reason="data/wave2_followup.txt is missing")
+                for r in d["values"] if r.get("reported") == "64%"], 1),
+    # a basename that is merely a substring of a known artifact is a
+    # distinct, nonexistent file — the context allowlist compares exact
+    # basenames, so analysis.py cannot ride in on run_analysis.py
+    ("gate reasons citing a tail of the pipeline script", ["--gate"],
+     "mock_gate.json",
+     lambda d: [r.update(reason="analysis.py is missing")
+                for r in d["values"]], 1),
 ]
 
 

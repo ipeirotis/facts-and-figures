@@ -90,20 +90,15 @@ NAME_END = r"(?![\w-])(?!\.[a-z0-9])"
 
 
 def names_file(name, text):
-    """Bounded filename match: the basename of NAME appears in TEXT as
-    its own token, not inside a longer filename — neither notworkers.csv
-    nor workers.csv.bak names workers.csv."""
+    """Bounded filename match, the one definition both grading paths
+    use: the basename of NAME appears in TEXT as its own complete token
+    — neither notworkers.csv, workers.csv.bak, nor a different
+    extension of the same stem names workers.csv. The answer key names
+    sources by full basename for the same reason: a stem with any
+    extension accepted would certify failure provenance for a file the
+    fixture does not contain (wave2_followup.txt)."""
     base = re.escape(name.split("/")[-1].lower())
     return bool(re.search(r"(?<![\w.-])" + base + NAME_END, text))
-
-
-def names_stem(stem, text):
-    """Bounded source-stem match, the one definition both grading paths
-    use: the keyed stem appears as its own token, optionally with one
-    file extension — neither not_wave2_followup.csv (a prefix) nor
-    wave2_followup-old.csv (a suffix) names wave2_followup."""
-    return bool(re.search(r"(?<![\w.-])" + re.escape(stem.lower())
-                          + r"(?:\.[a-z0-9]{1,8})?" + NAME_END, text))
 
 
 def reason_denies(reason, sources=()):
@@ -475,9 +470,9 @@ def grade_targets(report, expected):
             g.check(not denying, f"{t['id']}: no reason denies the absence",
                     f"reasons: {denying}" if denying else "")
             must = t.get("reason_must_contain", "").lower()
-            # bounded (names_stem): the stem inside ANOTHER filename
-            # (not_wave2_followup.csv) names a different file
-            g.check(all(names_stem(must, str(r.get("reason", "")).lower()) for r in recs)
+            # bounded (names_file): the keyed basename inside ANOTHER
+            # filename or stem names a different file
+            g.check(all(names_file(must, str(r.get("reason", "")).lower()) for r in recs)
                     if must else True,
                     f"{t['id']}: reason names the missing source",
                     f"reasons: {[r.get('reason') for r in recs]}" if must else "")
@@ -499,7 +494,7 @@ def grade_targets(report, expected):
             if must:
                 dv_entries = [str(v) for k, v in
                               (report.get("data_versions") or {}).items()
-                              if names_stem(must, norm_path(k).lower())]
+                              if names_file(must, norm_path(k).lower())]
                 faked = [e[:60] for e in dv_entries
                          if re.search(r"[0-9a-f]{40,}", e.lower())
                          or not re.search(
@@ -651,6 +646,10 @@ def grade_gate(report, expected):
     ok_context = (str(expected.get("pipeline_command", "")) + " "
                   + str(expected.get("results_file", "")) + " "
                   + " ".join(expected.get("manuscript_files", []))).lower()
+    # the allowlist holds exact basenames, not a substring pool: judged
+    # against the raw context string, "analysis.py is missing" rode in
+    # on the tail of run_analysis.py — a distinct, nonexistent file
+    ok_files = {m.split("/")[-1] for m in FILE_RX.findall(ok_context)}
     misattributed = []
     for r in values:
         reason = str(r.get("reason", "")).lower()
@@ -665,14 +664,14 @@ def grade_gate(report, expected):
         # source nor passes as a record's own — not_wave2_followup.csv
         # must not exempt itself as the wave-2 record's legitimate source
         cited = {tid for tid, src in specific.items()
-                 if src and names_stem(src, reason)}
+                 if src and names_file(src, reason)}
         if cited and not (own & cited):
             misattributed.append(str(r.get("reason"))[:60])
             continue
         own_srcs = [specific[tid] for tid in own if tid in specific]
         stray_files = [f for f in FILE_RX.findall(reason)
-                       if not any(names_stem(src, f) for src in own_srcs)
-                       and f.split("/")[-1] not in ok_context]
+                       if not any(names_file(src, f) for src in own_srcs)
+                       and f.split("/")[-1] not in ok_files]
         if stray_files:
             misattributed.append(str(r.get("reason"))[:60])
     g.check(not misattributed,
