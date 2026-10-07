@@ -140,6 +140,13 @@ MUTATIONS = [
     ("flagged-share reported without the value", [], "mock_good.json",
      lambda d: [r.update(reported="flagged") for r in d["values"]
                 if "13" in str(r.get("reported", ""))], 1),
+    ("absolute manuscript_files path", [], "mock_good.json",
+     lambda d: d.update(manuscript_files=["/tmp/fnf-eval.x/verify/manuscript.md"]), 0),
+    ("exempt unverifiable without explicit null computed", [], "mock_good.json",
+     lambda d: d["values"].append({"location": "manuscript.md, Data",
+                                   "reported": "0-100 scale",
+                                   "classification": "unverifiable",
+                                   "reason": "the scale is not a pipeline output"}), 1),
 ]
 
 

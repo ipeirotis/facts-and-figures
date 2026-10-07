@@ -152,10 +152,15 @@ def grade_top_level(g, report, expected):
             "" if got_version == want_version else f"report {got_version!r} vs VERSION {want_version!r}")
     want_files = expected.get("manuscript_files")
     if want_files:
-        got = report.get("manuscript_files")
-        g.check(sorted(map(str, got or [])) == sorted(want_files),
-                "manuscript_files names the scoped manuscript",
-                "" if sorted(map(str, got or [])) == sorted(want_files) else repr(got)[:60])
+        # the scoped set must match, but an absolute workspace path that
+        # resolves to the keyed file identifies it precisely — normalize
+        # like the data-provenance lookup instead of comparing literally
+        got = [str(x) for x in (report.get("manuscript_files") or [])]
+        ok_files = (len(got) == len(want_files)
+                    and all(any(names_input(g, norm_path(w)) for g in got)
+                            for w in want_files))
+        g.check(ok_files, "manuscript_files names the scoped manuscript",
+                "" if ok_files else repr(got)[:60])
     # the top-level pipeline command names THE pipeline (unlike per-record
     # supplementary commands), so it must at least invoke the canonical
     # script; output-directory arguments remain legitimate
@@ -182,9 +187,12 @@ def grade_top_level(g, report, expected):
                if r.get("classification") not in ("match", "mismatch", "unverifiable")]
     g.check(not bad_cls, "classification within the schema enum on every record",
             f"outside the enum: {bad_cls[:3]}" if bad_cls else "")
+    # an unverifiable record owes an EXPLICIT null computed — a missing
+    # key breaks consumers relying on the schema's stable record shape
     bad_shape = [str(r.get("reported"))[:40] for r in values
                  if (r.get("classification") == "unverifiable"
-                     and (r.get("computed") is not None or not r.get("reason")))
+                     and ("computed" not in r or r["computed"] is not None
+                          or not r.get("reason")))
                  or (r.get("classification") in ("match", "mismatch")
                      and (r.get("computed") is None or not r.get("tolerance")
                           or not r.get("producing_command")))]

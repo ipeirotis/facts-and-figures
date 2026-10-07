@@ -163,8 +163,11 @@ def safe_root(cand):
 # the proposal allowance must also resolve to its own lexical path: a
 # proposal root that is itself a symlink (facts-and-figures-out -> data)
 # would launder every generated file into the author directory it points
-# at, with safe_root none the wiser
-proposal_safe = safe_root(proposal) and proposal == proposal_lexical
+# at, with safe_root none the wiser. And it must be a directory or not
+# yet exist — a marker naming an existing author FILE would otherwise
+# hand that very file to the allowance
+proposal_safe = (safe_root(proposal) and proposal == proposal_lexical
+                 and (not os.path.exists(proposal) or os.path.isdir(proposal)))
 
 if lexical == marker or resolved == marker:
     # the marker is read-only while a run is armed: it is created before

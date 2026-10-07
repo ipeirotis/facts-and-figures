@@ -249,6 +249,13 @@ def main():
               write_payload(fproj, fproj / "facts-and-figures-out" / "s.py"), fproj,
               want_deny=False)
 
+        # a proposal root must be a directory: a marker naming an existing
+        # author file would otherwise hand that very file to the allowance
+        marker.write_text("manuscript.md\n")
+        check("marker naming an author file: write to that file denied",
+              write_payload(proj, proj / "manuscript.md"), proj, want_deny=True)
+        marker.write_text("")
+
         # a marker whose line carries an embedded NUL is planted garbage:
         # the hook must fall back to the default proposal directory, not
         # crash into a non-blocking hook error that lets the write through
