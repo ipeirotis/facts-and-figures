@@ -220,6 +220,22 @@ MUTATIONS = [
     ("reported predicate negated", [], "mock_good.json",
      lambda d: [r.update(reported="not p < 0.001") for r in d["values"]
                 if r.get("reported") == "p < 0.001"], 1),
+    # the gate companion requires the manuscript value verbatim too
+    ("gate reported value negated", ["--gate"], "mock_gate.json",
+     lambda d: [r.update(reported="not 71.48") for r in d["values"]
+                if r.get("reported") == "71.48"], 1),
+    # a graded echo of the keyed bundle is not RNG provenance
+    ("seed only in a computed bundle", [], "mock_good.json",
+     lambda d: (d.update(environment="Python 3.11.15, stdlib only"),
+                [r.update(computed=[10000, 20260816]) for r in d["values"]
+                 if r.get("reported") == "10,000"]), 1),
+    # the missing-source stem inside another filename names a different
+    # file
+    ("missing-source reason naming a lookalike file", [], "mock_good.json",
+     lambda d: [r.update(reason="data/not_wave2_followup.csv is missing "
+                                "from the distribution")
+                for r in d["values"]
+                if r.get("classification") == "unverifiable"], 1),
     # the manuscript's actual Data wording is verbatim-compliant and
     # must pair with the group-split target
     ("group-split reported with the manuscript wording", [], "mock_good.json",

@@ -250,6 +250,36 @@ def grade_top_level(g, report, expected):
     return values
 
 
+def check_reported_integrity(g, t, recs):
+    """The reported field must reproduce the claim it pairs on — in the
+    normal AND the gate path, since the schema requires the manuscript
+    value verbatim in both. A negated wrapper denies the claim ("not
+    71.48", "not p < 0.001" — the gap tolerates any tokens, so a
+    predicate operator between the negator and the value does not break
+    the span), and a predicate claim is irreducibly its keyed operator
+    and threshold: "p > 0.001", "p = 0.001" and a bare "0.001" all pair
+    on the number while reversing, altering, or dropping the assertion.
+    Both requirements derive from the answer key's existing fields, not
+    a verbatim reported key."""
+    vals = [a for a in t["anchors"] if any(c.isdigit() for c in a)] or t["anchors"]
+    neg_pats = [re.compile(r"\b(?:not|never|no|isn.?t|wasn.?t)\s+(?:\S+\s+){0,3}?"
+                           + anchor_rx(a).pattern) for a in vals]
+    negged = [r.get("reported") for r in recs
+              if any(p.search(str(r.get("reported", "")).lower()) for p in neg_pats)]
+    g.check(not negged,
+            f"{t['id']}: reported does not negate the manuscript value",
+            f"reported: {negged}" if negged else "")
+    if t.get("kind") == "predicate" and t.get("predicate") in ("less_than",
+                                                               "greater_than"):
+        op = "<" if t["predicate"] == "less_than" else ">"
+        want_ns = op + str(t.get("predicate_value", ""))
+        bad_pred = [r.get("reported") for r in recs
+                    if want_ns not in str(r.get("reported", "")).lower().replace(" ", "")]
+        g.check(not bad_pred,
+                f"{t['id']}: reported states the keyed predicate {want_ns}",
+                f"reported: {bad_pred}" if bad_pred else "")
+
+
 def grade_targets(report, expected):
     g = Grader()
     values = grade_top_level(g, report, expected)
@@ -281,10 +311,14 @@ def grade_targets(report, expected):
     # mention buried in a note is a remark, not provenance
     seed = str(expected.get("pipeline_seed", ""))
     if seed:
+        # computed values are deliberately NOT provenance: the keyed
+        # bundle [10000, 20260816] is a graded echo of the answer key
+        # (bundle_allowed names the seed), so counting it here was
+        # circular — a report with the seed nowhere but in that bundle
+        # recorded no RNG provenance at all
         prov = " ".join(
             [str(report.get("environment", "")), str(report.get("pipeline_command", ""))]
-            + [str(r.get("producing_command", "")) for r in values]
-            + [str(r.get("computed", "")) for r in values])
+            + [str(r.get("producing_command", "")) for r in values])
         # a negated mention is not provenance: "seed was not 20260816;
         # actual seed 7" names the digits while denying them, so the
         # negated phrase is stripped before the scan
@@ -301,34 +335,7 @@ def grade_targets(report, expected):
         if not recs:
             g.check(False, f"{t['id']}: a record covers it", f"no record mentions {t['anchors']}")
             continue
-        # a negated wrapper denies the claim it pairs on: "not 71.48"
-        # and "not p < 0.001" reproduce nothing, while the unchanged
-        # computed value would bless the denial. The gap tolerates any
-        # tokens, not only words — a predicate operator between the
-        # negator and the value must not break the span
-        vals = [a for a in t["anchors"] if any(c.isdigit() for c in a)] or t["anchors"]
-        neg_pats = [re.compile(r"\b(?:not|never|no|isn.?t|wasn.?t)\s+(?:\S+\s+){0,3}?"
-                               + anchor_rx(a).pattern) for a in vals]
-        negged = [r.get("reported") for r in recs
-                  if any(p.search(str(r.get("reported", "")).lower()) for p in neg_pats)]
-        g.check(not negged,
-                f"{t['id']}: reported does not negate the manuscript value",
-                f"reported: {negged}" if negged else "")
-        # a predicate claim is irreducibly its operator and threshold:
-        # "p > 0.001", "p = 0.001" and a bare "0.001" all pair on the
-        # number while reversing, altering, or dropping the manuscript
-        # assertion. The requirement comes from the keyed predicate
-        # fields the answer key already carries — not a verbatim
-        # reported key
-        if t.get("kind") == "predicate" and t.get("predicate") in ("less_than",
-                                                                   "greater_than"):
-            op = "<" if t["predicate"] == "less_than" else ">"
-            want_ns = op + str(t.get("predicate_value", ""))
-            bad_pred = [r.get("reported") for r in recs
-                        if want_ns not in str(r.get("reported", "")).lower().replace(" ", "")]
-            g.check(not bad_pred,
-                    f"{t['id']}: reported states the keyed predicate {want_ns}",
-                    f"reported: {bad_pred}" if bad_pred else "")
+        check_reported_integrity(g, t, recs)
         cls = {r.get("classification") for r in recs}
         g.check(cls == {t["expected"]}, f"{t['id']}: classified {t['expected']}",
                 f"report says {sorted(map(str, cls))}")
@@ -355,8 +362,13 @@ def grade_targets(report, expected):
                        or GATE_SUCCESS_RE.search(str(r.get("reason", "")).lower())]
             g.check(not denying, f"{t['id']}: no reason denies the absence",
                     f"reasons: {denying}" if denying else "")
-            must = t.get("reason_must_contain", "")
-            g.check(all(must.lower() in str(r.get("reason", "")).lower() for r in recs),
+            must = t.get("reason_must_contain", "").lower()
+            # bounded: the stem inside ANOTHER filename
+            # (not_wave2_followup.csv) names a different file
+            must_rx = (re.compile(r"(?<![\w.-])" + re.escape(must) + r"(?!\w)")
+                       if must else None)
+            g.check(all(must_rx.search(str(r.get("reason", "")).lower()) for r in recs)
+                    if must_rx else True,
                     f"{t['id']}: reason names the missing source",
                     f"reasons: {[r.get('reason') for r in recs]}" if must else "")
         else:
@@ -419,6 +431,9 @@ def grade_gate(report, expected):
             hits[id(r)][1] += 1
             rec_targets.setdefault(id(r), set()).add(t["id"])
         g.check(bool(recs), f"gate: {t['id']} covered by a record")
+        # the gate companion requires the manuscript value verbatim too
+        if recs:
+            check_reported_integrity(g, t, recs)
     # one record per manuscript value cuts both ways: a record pairing to
     # several targets is a record of no single value, so ten copies of a
     # concatenated reported string must not pass as ten distinct records
