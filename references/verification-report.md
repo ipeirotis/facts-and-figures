@@ -62,7 +62,9 @@ it (`references/compute-environment.md` owns the pin).
 Each record in `values` carries one manuscript value:
 
 - `location` (required): where the value appears, precise enough for the
-  author to find it.
+  author to find it. For tables include table, row and column labels; for
+  figures include artifact, panel, series/group and mark/label. Keep
+  separate occurrences separate even when the same number appears in prose.
 - `reported` (required): the value as the manuscript states it, verbatim —
   `"83.41"`, `"7%"`, `"p < 0.05"`.
 - `classification` (required): exactly one of `match`, `mismatch`,
@@ -89,6 +91,11 @@ Each record in `values` carries one manuscript value:
   the unclear producing command, or the failed run.
 - `note` (optional): anything the author needs that fits no other field.
 
-Every classification in the file must appear in the prose report and vice
+Every numerical classification in the file must appear in the prose report and vice
 versa; a value present in one and absent from the other is a defect in the
 run. Secrets are redacted here under the same rule as every logged command.
+
+For table/graph verification, numeric verdicts follow these field rules;
+non-numeric rendering findings and limits are reported separately in prose
+under `references/table-figure-verification.md`. A correct numeric label
+does not imply uninspected plot geometry matches.

@@ -77,6 +77,26 @@ missing input is the deliverable), but when written it is graded under
 `--gate`: every record unverifiable with a reason, nothing computed, the
 missing input named.
 
+## Table and figure verification starter
+
+`fixtures/table-figure-paper/` contains a separate synthetic manuscript with
+Table 1 and a submitted SVG bar chart, source data, and a stdlib-only
+pipeline that writes correct table/figure outputs to an explicitly named
+new directory. Group A's mean is 80.0 and is correct in both artifacts;
+group B's mean is 60.0 but is deliberately reported/plotted as 65.0.
+`table-figure-expected.json` holds the prompt and external answer key, with
+separate expectations for cells, printed graph labels and bar geometry.
+
+Run `python3 -B evals/test_table_figure_fixture.py -v` to verify the test
+materials, pipeline execution, exact SVG encoding and input preservation.
+This does not evaluate Claude. For an agent pilot, copy only this fixture
+and the installed skill runtime to a fresh workspace, keep the answer key
+outside it, and submit the key's prompt. Review the four-section report and
+numeric JSON against the key, including all three shared requirements.
+The existing `run_agent_eval.sh` and toy-paper graders still run their
+original cases; they do not automatically run or grade this new fixture.
+No end-to-end agent score is claimed until that pilot is actually run.
+
 ## CI
 
 `.github/workflows/ci.yml` runs the deterministic layer plus the repo's

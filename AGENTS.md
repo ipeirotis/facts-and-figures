@@ -45,6 +45,7 @@ SKILL.md                            entry point, always loaded: master rule,
 references/analysis-integrity.md    the protocol: three capabilities, five
                                     verification steps, integrity norms
 references/figure-design.md         capability 2: what a re-render may change
+references/table-figure-verification.md   capability 1: table and graph audit
 references/compute-environment.md   local-first execution, cloud-bootstrap
                                     detection, provenance for remote runs
 agents/claude-code/facts-and-figures.md   subagent wrapper: loads SKILL.md,

@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Versions use [Se
 
 ## [Unreleased]
 
+### Added
+
+- Explicit table and existing-graph verification within capability 1,
+  distinguishing numeric parity from labels/axes/captions and retaining
+  unverifiable outcomes when exact marks or inspection tools are unavailable.
+- A synthetic table/figure fixture with correct and incorrect cells/marks,
+  a deterministic pipeline and offline fixture self-tests.
+
 ### Fixed
 
 Codex review findings on the skill as vendored into a manuscript repository (IliasTriant/inattentiveness_paper#14), each checked against the current text before fixing:

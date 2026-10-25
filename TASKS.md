@@ -4,6 +4,15 @@ The working roadmap for this skill, in priority order. `AGENTS.md` governs how
 each item is implemented; `CHANGELOG.md` records what shipped. An item is done
 when its definition of done holds, not when code for it exists.
 
+## Unreleased
+
+- [x] **2026-10-24 — Explicit table and existing-graph verification.**
+  Route capability 1 through `references/table-figure-verification.md`;
+  distinguish numeric parity from rendering checks and preserve originals.
+  Add `evals/fixtures/table-figure-paper/`, an external answer key and
+  deterministic self-tests. This starter fixture is not a measured
+  end-to-end Claude benchmark.
+
 ## v0.3.0
 
 - [x] **1. Enforce the write boundary mechanically.** The skill's headline

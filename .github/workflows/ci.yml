@@ -23,6 +23,8 @@ jobs:
           persist-credentials: false
       - name: run the fixture self-check (no LLM)
         run: python3 evals/check_fixture.py
+      - name: check the table and figure fixture (no LLM)
+        run: python3 -B evals/test_table_figure_fixture.py -v
       - name: run the grader self-tests (no LLM)
         run: python3 evals/test_graders.py
       - name: run the write-boundary hook self-tests (no LLM)

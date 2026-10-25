@@ -84,6 +84,11 @@ proposal the author decides on.
 
 ## Capability 1: verify reported numbers
 
+This includes table cells and existing figures, not only prose. For those
+artifacts, follow `references/table-figure-verification.md` within these
+same five steps. Verification checks the author's submitted artifacts; it
+does not author a redesigned graph or a new analysis.
+
 Run the five steps in order. Do not reorder them: the manuscript inventory
 and the producing command are both pinned before the first run, which is what
 makes the run a verification instead of a search.
@@ -109,6 +114,11 @@ pipeline output, so what the pipeline shows you can never shape which
 manuscript values get checked. The abstract and introduction matter most:
 stale values hide where the text was written first and the pipeline rerun
 last.
+
+Inventory tables by row, column, units, and footnotes. Inventory figures by
+artifact path, panel, series/group, quantity, caption, and producing script;
+record what can be read exactly and what needs image or vector inspection.
+Do not omit a graph merely because its marks lack printed numbers.
 
 ### 3. State the plan before running
 

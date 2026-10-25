@@ -76,6 +76,15 @@ While a run is active (the skill creates `facts-and-figures-out/.active` wheneve
 
 ## Safety model
 
+Verification includes tables and existing graphs. Ask, for example:
+"Verify Table 1 and Figure 1 against the existing pipeline; report numeric,
+label, axis and caption discrepancies without editing either artifact."
+The skill traces cells and plotted quantities to executed outputs and checks
+the submitted artifacts, not only fresh outputs. Exact graph checks need
+accessible labels/vector data and rendering inspection; inaccessible checks
+are reported unverifiable, never estimated by eye. See
+`references/table-figure-verification.md`. This is separate from redesign.
+
 The skill logs provenance for every result, never modifies existing code, data, figures, or manuscript files, and never searches specifications for a favorable result. Generated work stays in a proposal directory (`facts-and-figures-out/` by default) until the author adopts it.
 
 ## Layout
@@ -83,6 +92,7 @@ The skill logs provenance for every result, never modifies existing code, data, 
 ```
 SKILL.md                            entry point: master rule, capabilities, gates, output
 references/analysis-integrity.md    the protocol and integrity norms
+references/table-figure-verification.md   existing table cells and graph artifacts
 references/figure-design.md         what a figure re-render may and may not change
 references/compute-environment.md   local-first execution and cloud provenance
 agents/claude-code/facts-and-figures.md   subagent wrapper for isolated runs

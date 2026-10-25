@@ -1,6 +1,6 @@
 ---
 name: facts-and-figures
-description: Verify numbers reported in an academic manuscript against the repository's own analysis pipeline, regenerate a named figure from the same data with improved presentation, or run a new analysis explicitly specified by the author, such as a robustness check, baseline, or subgroup analysis. Use when the repository contains the author's analysis code and its data is reachable as the pipeline defines it, whether that data sits in the repository or in a source the pipeline is configured to read such as a warehouse table or bucket object, and the task requires reproducible computation with command-level provenance. Do not use for prose editing, literature searches, citation verification, or exploratory searches for favorable results.
+description: Verify manuscript numbers, table cells, and existing graphs against the repository's own analysis pipeline, regenerate a named figure from the same data with improved presentation, or run a new analysis explicitly specified by the author, such as a robustness check, baseline, or subgroup analysis. Use when the repository contains the author's analysis code and its data is reachable as the pipeline defines it, whether that data sits in the repository or in a source the pipeline is configured to read such as a warehouse table or bucket object, and the task requires reproducible computation with command-level provenance. Do not use for prose editing, literature searches, citation verification, or exploratory searches for favorable results.
 license: MIT
 metadata:
   version: "0.5.0"
@@ -25,7 +25,7 @@ Two corollaries carry the rest of the skill:
 
 ## Select a capability
 
-1. **Verify numbers:** rerun the existing pipeline and compare every in-scope manuscript value with a traced output.
+1. **Verify numbers, tables, and graphs:** rerun the existing pipeline and compare every in-scope manuscript value, table cell, and existing figure with traced outputs, recording numerical and presentation limitations separately.
 2. **Regenerate a figure:** reproduce a named figure from the same data, changing presentation rather than the underlying sample, variables, transformations, or estimates.
 3. **Run a named analysis:** pin the author's requested specification before execution, write new work only in a proposal directory, and report the complete result regardless of direction.
 
@@ -52,6 +52,11 @@ This decision comes after the protocol's plan is pinned, not before it. Measurin
 Read `references/analysis-integrity.md` before acting and follow its capability-specific protocol and no-forking-paths rule. Figure regeneration additionally reads `references/figure-design.md`, which owns what a re-render may change and what it must hold fixed. Log every command that produces a reported value or artifact. Generated scripts and outputs stay in the proposal directory: a run never places them into the author's existing code, data, figures, or manuscript, and never edits those files. Adoption is the author's own step.
 
 ## Return
+
+For verification involving tables or existing graphs, also follow
+`references/table-figure-verification.md`. Check the submitted artifacts as
+well as fresh pipeline outputs; a successful rerun alone does not establish
+that the paper's table or graph agrees. Mark unavailable checks unverifiable.
 
 Return exactly:
 

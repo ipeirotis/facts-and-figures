@@ -1,0 +1,17 @@
+{
+  "fixture": "fixtures/table-figure-paper",
+  "prompt": "Verify Table 1 and Figure 1 in manuscript.md against this repository's existing analysis pipeline. Check numeric labels and actual bar heights separately, plus group labels, axes, units and caption. Do not edit the submitted artifacts. Produce the skill's four-section report and numerical JSON companion.",
+  "pipeline_command": "python3 analysis/run_analysis.py --output-dir facts-and-figures-out/recomputed",
+  "mean_quality": {"A": 80.0, "B": 60.0},
+  "targets": [
+    {"location": "Table 1, row A, Mean", "reported": 80.0, "computed": 80.0, "expected": "match"},
+    {"location": "Table 1, row B, Mean", "reported": 65.0, "computed": 60.0, "expected": "mismatch"},
+    {"location": "Figure 1, A numeric label", "reported": 80.0, "computed": 80.0, "expected": "match"},
+    {"location": "Figure 1, B numeric label", "reported": 65.0, "computed": 60.0, "expected": "mismatch"},
+    {"location": "Figure 1, A bar", "reported": 80.0, "computed": 80.0, "expected": "match"},
+    {"location": "Figure 1, B bar", "reported": 65.0, "computed": 60.0, "expected": "mismatch"}
+  ],
+  "rendering": "Group identities A/B, zero origin, linear 0–100 axis, units and caption are correct. Verify the submitted SVG marks independently of labels; y = 240 - 2 * score, height = 2 * score.",
+  "shared_checks": ["logged producing command, actual data hash and environment", "submitted files unchanged", "outputs confined to proposal directory; own marker removed"],
+  "limitations": "This key is not consumed by the existing toy-paper graders. Review the agent output against this key; the offline fixture self-check validates materials, not model performance. Keep this key outside the agent workspace."
+}
