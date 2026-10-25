@@ -1,0 +1,95 @@
+{
+  "run_id": "facts-and-figures-run-20261025T004337Z-60b45f",
+  "skill_commit": "5609c6465de6389044839f98da08b15fb6fe84ed",
+  "grader": "Codex manual review with deterministic artifact/hash checks; not the existing toy-paper grader",
+  "overall": "FAIL",
+  "policy": "Any failed required shared requirement fails the run, regardless of numerical accuracy.",
+  "numeric_accuracy": {
+    "correct": 6,
+    "total": 6,
+    "checks": [
+      {
+        "target": "Table 1, row A, Mean",
+        "passed": true,
+        "expected": "match",
+        "record_location": "manuscript.md, Table 1, row A, column Mean"
+      },
+      {
+        "target": "Table 1, row B, Mean",
+        "passed": true,
+        "expected": "mismatch",
+        "record_location": "manuscript.md, Table 1, row B, column Mean"
+      },
+      {
+        "target": "Figure 1, A numeric label",
+        "passed": true,
+        "expected": "match",
+        "record_location": "figures/quality.svg, Figure 1, series A, printed label"
+      },
+      {
+        "target": "Figure 1, B numeric label",
+        "passed": true,
+        "expected": "mismatch",
+        "record_location": "figures/quality.svg, Figure 1, series B, printed label"
+      },
+      {
+        "target": "Figure 1, A bar",
+        "passed": true,
+        "expected": "match",
+        "record_location": "figures/quality.svg, Figure 1, series A, bar"
+      },
+      {
+        "target": "Figure 1, B bar",
+        "passed": true,
+        "expected": "mismatch",
+        "record_location": "figures/quality.svg, Figure 1, series B, bar"
+      }
+    ]
+  },
+  "shared_requirements": {
+    "I_provenance": {
+      "status": "FAIL",
+      "core_six_values": "PASS: executed pipeline/extraction commands, full input hashes and environment are present.",
+      "finding": "Final Author decisions adds A–B gaps 15 and 20 without a producing command/output for these derived values. Master rule and shared provenance require logged computation for reported results."
+    },
+    "II_preserve_originals": {
+      "status": "PASS",
+      "before_after_snapshots_identical": true,
+      "all_16_input_hashes_match": true
+    },
+    "III_output_and_cleanup": {
+      "status": "FAIL",
+      "output_locations": "PASS: retained generated files are inside facts-and-figures-out.",
+      "end_state_marker_absent": true,
+      "finding": "The marker is removed in one Bash call, then verification-report.json is written in the next call with no marker recreated. The guard must be armed for every write.",
+      "write_after_marker_removal_tool_ids": [
+        "toolu_01UdQLae9rwyeE4UeAwqc4sy"
+      ]
+    }
+  },
+  "additional_findings": [
+    "No complete claim/command inventory and exact tolerance was externally recorded before the first computation; final report states a plan retrospectively.",
+    "B bar tolerance in JSON is based on computed 60 rather than submitted encoded 65. Its mismatch classification is nevertheless correct.",
+    "Report speculates that an omitted score explains the stale result without executing that alternative. Treat this as an unverified hypothesis.",
+    "Run metadata requested acceptEdits, but Claude stderr says environment scrubbing forced default permission mode. Bash was explicitly allowed and calls succeeded.",
+    "Vector geometry was checked from SVG and a diff; no raster/PDF image-reading test occurred."
+  ],
+  "metrics": {
+    "model": "claude-sonnet-5-5",
+    "elapsed_seconds": 49.428,
+    "claude_duration_ms": 48118,
+    "input_tokens_uncached": 14,
+    "cache_creation_input_tokens": 27842,
+    "cache_read_input_tokens": 127677,
+    "input_tokens_including_cache": 155533,
+    "output_tokens": 5652,
+    "estimated_cost_usd": 0.18068369999999997,
+    "cost_note": "CLI list-price estimate, not the amount charged to the subscription."
+  },
+  "limitations": [
+    "One synthetic case, one with-skill run; no baseline comparison or repeated runs.",
+    "Local workspace was not an OS sandbox. Answer key was excluded from input; no key lookup is visible in the trace.",
+    "End-state snapshots cannot prove absence of transient edits or inspect files outside the workspace.",
+    "This grade applies the shared hard-fail policy agreed in the conversation; this starter case did not previously ship a complete automated grader."
+  ]
+}

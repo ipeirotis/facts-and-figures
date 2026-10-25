@@ -1,0 +1,12 @@
+{
+  "original_zip_sha256": "67ef95b4dd21d1b7df97102c6caa14ae0d9c3d913cb47272e3743cf5952c1d39",
+  "sanitization": [
+    "Local user/home/workspace paths replaced with placeholders.",
+    "Session, telemetry and request identifiers removed or redacted.",
+    "Model thinking/redacted-thinking blocks and signatures omitted.",
+    "All tool calls/results and final report retained subject to those redactions."
+  ],
+  "raw_archive": "Original ZIP retained privately in the conversation attachment; not republished.",
+  "runtime": "Runtime files identify skill_commit in run-metadata.json; not duplicated in publication.",
+  "publishing_status": "Sanitized copy of a user-executed local run, not a GitHub Actions run."
+}

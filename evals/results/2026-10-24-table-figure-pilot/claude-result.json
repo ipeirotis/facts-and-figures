@@ -1,0 +1,113 @@
+{
+  "duration_api_ms": 45121,
+  "stop_reason": "end_turn",
+  "total_cost_usd": 0.18068369999999997,
+  "usage": {
+    "input_tokens": 14,
+    "cache_creation_input_tokens": 27842,
+    "cache_read_input_tokens": 127677,
+    "output_tokens": 5652,
+    "output_tokens_details": {
+      "thinking_tokens": 750
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 27842,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 2217,
+        "cache_read_input_tokens": 31642,
+        "cache_creation_input_tokens": 1300,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1300
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "modelUsage": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 14,
+      "outputTokens": 5652,
+      "cacheReadInputTokens": 127677,
+      "cacheCreationInputTokens": 27842,
+      "webSearchRequests": 0,
+      "costUSD": 0.18068369999999997,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 750,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "fast_mode_disabled_reason": "sdk_opt_in_required",
+  "subagent_stats": {
+    "spawned": 0,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+    },
+    "started_in_background": 0,
+    "max_depth": 0,
+    "spawned_by_subagents": 0,
+    "completed": 0,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {}
+  },
+  "safety_stops": 0,
+  "is_error": false,
+  "num_turns": 9,
+  "subtype": "success",
+  "api_error_status": null,
+  "result": "## 1. Scope and gate\n\n- **Capability:** verify numbers, tables and graphs.\n- **Target:** Table 1 and Figure 1 in `manuscript.md`. Figure 1 is the submitted file `figures/quality.svg`.\n- **Inputs found:**\n  - `analysis/run_analysis.py`, which the README names as the canonical pipeline.\n  - `data/scores.csv`, with 4 rows.\n  - The submitted SVG.\n  - Python 3.9.6.\n  - There is no `<paper_context>` file (no `AGENTS.md`, `CLAUDE.md` or `paper-meta.md`), so I worked from the files you named.\n- **Missing prerequisites:** none.\n- **Marker:** I created `facts-and-figures-out/.active` exclusively and removed it at the end.\n\n## 2. Method and provenance\n\n- **Plan, fixed before running:**\n  - Compare each Table 1 cell and each printed label to the pipeline mean at one decimal. The accepted interval is half-open, [m−0.05, m+0.05).\n  - Check the bar geometry separately, using the README's axis transform (y=240 is 0, y=40 is 100, so score = height/2).\n- **Commands, both run from the repository root:**\n  - `python3 -I analysis/run_analysis.py --output-dir facts-and-figures-out/recomputed`\n  - `python3 -I facts-and-figures-out/extract_svg.py figures/quality.svg`\n- **What the extraction script does:** it parses the `rect` and `data-value-for` attributes in the SVG and converts height to score. I wrote it as a new file in the proposal directory. It has no side calculations.\n- **Environment:** Python 3.9.6, standard library only, no seed.\n- **Inputs and hashes (sha256):**\n  - `data/scores.csv`: `a61e82df…eb8dd`\n  - `figures/quality.svg`: `4fca7a38…13bc`\n  - `manuscript.md`: `6e1cf155…db55`\n  - `analysis/run_analysis.py`: `34e52c25…2729`\n  - The directory is not a git repository, so these hashes identify the data version.\n- **Preservation:** all pipeline writes went to `facts-and-figures-out/recomputed/`. I did not edit the manuscript, data, code or submitted figure.\n- **Outputs:**\n  - `facts-and-figures-out/recomputed/` (`results.json`, `table.csv`, `quality.svg`)\n  - `facts-and-figures-out/extract_svg.py`\n  - `facts-and-figures-out/verification-report.json`\n- **Teardown:** nothing was provisioned. The marker is gone. I kept `facts-and-figures-out/` because it holds the report.\n\n## 3. Results\n\n**Pipeline output** (`results.json`): A = 80.0 and B = 60.0. The raw scores are A: 75, 85 and B: 55, 65.\n\n**Table 1**\n\n| Cell | Reported | Computed | Verdict |\n|---|---|---|---|\n| Row A, Mean | 80.0 | 80.0 | match |\n| Row B, Mean | 65.0 | 60.0 | **mismatch** |\n\n- **Labels and units:**\n  - The Group and Mean headers match the pipeline's `group` and `mean` fields.\n  - The caption's \"0–100 scale\" matches the 0–100 axis the pipeline uses.\n  - The data file records no units beyond the score itself.\n  - The row labels are in the right order. The wrong number sits under the correct label, B.\n\n**Figure 1: numeric labels and bar heights, checked separately**\n\n| Mark | Reported | Computed | Verdict |\n|---|---|---|---|\n| A, printed label | 80.0 | 80.0 | match |\n| B, printed label | 65.0 | 60.0 | **mismatch** |\n| A, bar | height 160, which is 80.0 | 80.0 | match |\n| B, bar | height 130 (y=110), which is 65.0 | 60.0 | **mismatch** |\n\n- **Bar B:** the geometry is wrong, not only the label. The pipeline's own figure draws B at y=120 with height 120.\n- **Diff against the freshly generated SVG:** the only differences are those two B lines, the `rect` and the label text. Bar A is identical.\n- **Group labels:** the A and B labels under the bars match the `data-group` attributes and the pipeline's groups.\n- **Axes:**\n  - The y-axis runs linearly from 0 to 100, with bars starting at zero.\n  - The ticks sit at the documented positions. Tick 100 is at y=45 as a text baseline, 5 px below y=40, which is the same offset the pipeline uses.\n  - The x-axis is titled \"Group\".\n- **Chart title and y-axis unit:** the chart title is \"Mean quality score\". There is no y-axis title, so the unit and scale appear only in the chart title and the caption. This is a presentation note, not a numeric finding.\n- **Caption:** \"Bars show group means on the same 0–100 quality scale as Table 1.\" The scale statement is consistent. The caption's implied agreement with Table 1 holds numerically only for A. For B, the table and figure agree with each other (both 65.0) but not with the data.\n\n## 4. Author decisions\n\n1. **Table 1, B Mean (65.0 vs 60.0):** the data gives 60.0. Is `data/scores.csv` the intended snapshot? If it is, 65.0 should become 60.0. If not, which data produced 65.0? One possibility is that the manuscript was written from different or earlier data, for example without the score of 55.\n2. **Figure 1, B printed label and bar:** the label and the bar both need correcting to 60.0 and height 120. The submitted file is stale. You could replace it with the pipeline's `facts-and-figures-out/recomputed/quality.svg` as a proposal. I have not changed any of your files.\n3. **Optional presentation:** should the y-axis carry its own title, such as \"Mean quality score (0–100)\"? If you want a redesign, that would be a separate figure-regeneration request.\n4. **Consistency check:** once B is corrected, check the whole paper for other mentions of 65 or the A–B gap. Correcting B changes the gap from 15 to 20.\n\nThe companion `facts-and-figures-out/verification-report.json` has six value records that agree with the verdicts above: 2 matches and 2 mismatches for the table and printed labels, and 1 match and 1 mismatch for the bars. Its `computed` fields hold the full-precision pipeline values.",
+  "ttft_ms": 3298,
+  "type": "result",
+  "duration_ms": 48118,
+  "ttft_stream_ms": 2491,
+  "time_to_request_ms": 1556,
+  "first_content_frame_ms": 2491,
+  "queued_turn_count": 0,
+  "result_index": 0,
+  "model_usage_since_last_result": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 14,
+      "outputTokens": 5652,
+      "cacheReadInputTokens": 127677,
+      "cacheCreationInputTokens": 27842,
+      "webSearchRequests": 0,
+      "costUSD": 0.18068369999999997,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 750,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  }
+}

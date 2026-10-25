@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320">
+<rect width="480" height="320" fill="white"/>
+<g font-family="sans-serif" font-size="14" fill="#17212b">
+<text x="240" y="22" text-anchor="middle">Mean quality score</text>
+<path d="M60 40 V240 H440" fill="none" stroke="#17212b"/>
+<text x="48" y="245" text-anchor="end">0</text>
+<text x="48" y="205" text-anchor="end">20</text>
+<text x="48" y="165" text-anchor="end">40</text>
+<text x="48" y="125" text-anchor="end">60</text>
+<text x="48" y="85" text-anchor="end">80</text>
+<text x="48" y="45" text-anchor="end">100</text>
+<rect data-group="A" x="120" y="80" width="70" height="160" fill="#366b9b"/>
+<text data-value-for="A" x="155" y="70" text-anchor="middle">80.0</text>
+<text x="155" y="265" text-anchor="middle">A</text>
+<rect data-group="B" x="300" y="110" width="70" height="130" fill="#366b9b"/>
+<text data-value-for="B" x="335" y="100" text-anchor="middle">65.0</text>
+<text x="335" y="265" text-anchor="middle">B</text>
+<text x="240" y="300" text-anchor="middle">Group</text></g></svg>

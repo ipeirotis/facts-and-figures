@@ -1,0 +1,77 @@
+{
+  "schema": "facts-and-figures.verification/1",
+  "skill_version": "0.5.0",
+  "manuscript_files": [
+    "manuscript.md"
+  ],
+  "pipeline_command": "python3 -I analysis/run_analysis.py --output-dir facts-and-figures-out/recomputed",
+  "environment": "Python 3.9.6 (macOS Darwin 25.6.0), stdlib only; no seed; run with -I",
+  "data_versions": {
+    "data/scores.csv": "sha256:a61e82dfd6a04dcb5464a2421ea4fd109cd3c8ce7f129b5cc26a1ab9586eb8dd",
+    "figures/quality.svg": "sha256:4fca7a38fc424baa010b860b88e567550bd6dda665526bae1cb37b2ee12a13bc",
+    "manuscript.md": "sha256:6e1cf155737ac89cb40b37f8948903ff7ea2893a3fa78f252ac45bfc1991db55",
+    "analysis/run_analysis.py": "sha256:34e52c2567328a50154ee0294723d950052bd592530be00ad18fd6629d862729"
+  },
+  "values": [
+    {
+      "location": "manuscript.md, Table 1, row A, column Mean",
+      "reported": "80.0",
+      "classification": "match",
+      "computed": 80.0,
+      "tolerance": "half-open [79.95, 80.05), k=1",
+      "boundary": false,
+      "producing_command": "python3 -I analysis/run_analysis.py --output-dir facts-and-figures-out/recomputed",
+      "note": ""
+    },
+    {
+      "location": "manuscript.md, Table 1, row B, column Mean",
+      "reported": "65.0",
+      "classification": "mismatch",
+      "computed": 60.0,
+      "tolerance": "half-open [64.95, 65.05), k=1",
+      "boundary": false,
+      "producing_command": "python3 -I analysis/run_analysis.py --output-dir facts-and-figures-out/recomputed",
+      "note": "Group B scores are 55 and 65, mean 60.0."
+    },
+    {
+      "location": "figures/quality.svg, Figure 1, series A, printed label",
+      "reported": "80.0",
+      "classification": "match",
+      "computed": 80.0,
+      "tolerance": "half-open [79.95, 80.05), k=1",
+      "boundary": false,
+      "producing_command": "python3 -I analysis/run_analysis.py --output-dir facts-and-figures-out/recomputed",
+      "note": ""
+    },
+    {
+      "location": "figures/quality.svg, Figure 1, series B, printed label",
+      "reported": "65.0",
+      "classification": "mismatch",
+      "computed": 60.0,
+      "tolerance": "half-open [64.95, 65.05), k=1",
+      "boundary": false,
+      "producing_command": "python3 -I analysis/run_analysis.py --output-dir facts-and-figures-out/recomputed",
+      "note": ""
+    },
+    {
+      "location": "figures/quality.svg, Figure 1, series A, bar",
+      "reported": "height=160 (y=80, baseline 240)",
+      "classification": "match",
+      "computed": 80.0,
+      "tolerance": "score=height/2 must equal 80.0 within [79.95, 80.05)",
+      "boundary": false,
+      "producing_command": "python3 -I analysis/run_analysis.py --output-dir facts-and-figures-out/recomputed ; python3 -I facts-and-figures-out/extract_svg.py figures/quality.svg",
+      "note": "Mapping per README: 0 at y=240, 100 at y=40, so 2 px per point."
+    },
+    {
+      "location": "figures/quality.svg, Figure 1, series B, bar",
+      "reported": "height=130 (y=110, baseline 240)",
+      "classification": "mismatch",
+      "computed": 60.0,
+      "tolerance": "score=height/2 must be within [59.95, 60.05); submitted bar encodes 65.0",
+      "boundary": false,
+      "producing_command": "python3 -I analysis/run_analysis.py --output-dir facts-and-figures-out/recomputed ; python3 -I facts-and-figures-out/extract_svg.py figures/quality.svg",
+      "note": "Correct bar would be height=120, y=120. The bar disagrees with the pipeline independently of its label."
+    }
+  ]
+}

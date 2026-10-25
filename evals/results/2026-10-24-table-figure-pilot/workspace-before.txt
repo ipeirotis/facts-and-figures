@@ -1,0 +1,41 @@
+a936e5e9bbf6d12af196ee66cb46297316a5baf3cf4a65496e86c13123be30a2  ./.claude/settings.json
+9f85f9159f33ca65a23272417dcfbec61f27b5be692343afafac368dd4c2f614  ./.claude/skills/facts-and-figures/LICENSE
+1d4d5021fb7db95b7682479da5b7bee2c8e7974bb31ea8067ead05ea0972c92d  ./.claude/skills/facts-and-figures/SKILL.md
+a0ad50640139a524f86591157145bf1d4674ea9c065bfea21558f0f7b04430c8  ./.claude/skills/facts-and-figures/VERSION
+07e88f740631e554536ba90132c98efbf6f5ba58fc019cc31362d8ec956ece49  ./.claude/skills/facts-and-figures/hooks/hooks.json
+e8ada2ec429e58f6a9de43e0d466755096dea441996cf8a4ce02842862bf65fd  ./.claude/skills/facts-and-figures/hooks/write-boundary.sh
+9ba9d44a38a518faaa5b2637b8adf571e1759b1a687412b9a7bc79d1c47264ff  ./.claude/skills/facts-and-figures/references/analysis-integrity.md
+8292981109b9c75837c295a950642f7d9e6a5f5ba684940b4bd9e7a3423557cd  ./.claude/skills/facts-and-figures/references/compute-environment.md
+22a205d077b093701955ee827ca80f0ee8d17b0db394286b88ac865f6482afae  ./.claude/skills/facts-and-figures/references/figure-design.md
+e2b5298eb4da5de2bf553b9c4e6742e246d80aa7c13b3f52dcddd2c117a4f732  ./.claude/skills/facts-and-figures/references/table-figure-verification.md
+052258ca982bff3730ca807c33338b21034515b257fe17da122b942bf8c73bc4  ./.claude/skills/facts-and-figures/references/verification-report.md
+2f4bffda8349e330bdb4d6693f25576b7fbf3801c15b14e2da7f9fb16936ade7  ./README.md
+34e52c2567328a50154ee0294723d950052bd592530be00ad18fd6629d862729  ./analysis/run_analysis.py
+a61e82dfd6a04dcb5464a2421ea4fd109cd3c8ce7f129b5cc26a1ab9586eb8dd  ./data/scores.csv
+4fca7a38fc424baa010b860b88e567550bd6dda665526bae1cb37b2ee12a13bc  ./figures/quality.svg
+6e1cf155737ac89cb40b37f8948903ff7ea2893a3fa78f252ac45bfc1991db55  ./manuscript.md
+d 755 - - - 22716382 . -> 
+d 755 - 1792889016877611936 1792889017019076483 22716383 ./analysis -> 
+d 755 - 1792889016877762560 1792889017019845936 22716389 ./data -> 
+d 755 - 1792889016877892976 1792889017019477022 22716386 ./figures -> 
+d 755 - 1792889016882199948 1792889017021992923 22716403 ./.claude/skills/facts-and-figures/hooks -> 
+d 755 - 1792889016883305524 1792889017021599425 22716397 ./.claude/skills/facts-and-figures/references -> 
+d 755 - 1792889017019981269 1792889017019981269 22716392 ./.claude/skills -> 
+d 755 - 1792889017021650133 1792889017021650133 22716393 ./.claude/skills/facts-and-figures -> 
+d 755 - 1792889017022042214 1792889017022042214 22716391 ./.claude -> 
+f 644 1 1792889016875596574 1792889017020509432 22716396 ./.claude/skills/facts-and-figures/LICENSE -> 
+f 644 1 1792889016876002904 1792889017020216767 22716394 ./.claude/skills/facts-and-figures/SKILL.md -> 
+f 644 1 1792889016876339986 1792889017020363100 22716395 ./.claude/skills/facts-and-figures/VERSION -> 
+f 644 1 1792889016877512520 1792889017019253899 22716385 ./README.md -> 
+f 644 1 1792889016877657269 1792889017019046650 22716384 ./analysis/run_analysis.py -> 
+f 644 1 1792889016877796893 1792889017019822937 22716390 ./data/scores.csv -> 
+f 644 1 1792889016877930684 1792889017019451189 22716387 ./figures/quality.svg -> 
+f 644 1 1792889016878035892 1792889017019624855 22716388 ./manuscript.md -> 
+f 644 1 1792889016882150490 1792889017021810799 22716404 ./.claude/skills/facts-and-figures/hooks/hooks.json -> 
+f 644 1 1792889016882611029 1792889017020745806 22716398 ./.claude/skills/facts-and-figures/references/analysis-integrity.md -> 
+f 644 1 1792889016882828152 1792889017021356927 22716401 ./.claude/skills/facts-and-figures/references/compute-environment.md -> 
+f 644 1 1792889016883047193 1792889017021168886 22716400 ./.claude/skills/facts-and-figures/references/figure-design.md -> 
+f 644 1 1792889016883248025 1792889017021565884 22716402 ./.claude/skills/facts-and-figures/references/table-figure-verification.md -> 
+f 644 1 1792889016883463690 1792889017020965888 22716399 ./.claude/skills/facts-and-figures/references/verification-report.md -> 
+f 644 1 1792889017022086755 1792889017022086755 22716406 ./.claude/settings.json -> 
+f 755 1 1792889016882363072 1792889017021961923 22716405 ./.claude/skills/facts-and-figures/hooks/write-boundary.sh -> 
