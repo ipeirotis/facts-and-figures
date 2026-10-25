@@ -13,6 +13,13 @@ when its definition of done holds, not when code for it exists.
   deterministic self-tests. This starter fixture is not a measured
   end-to-end Claude benchmark.
 
+- [x] **2026-10-24 — Local table/figure pilot runner.**
+  `evals/run_table_figure_eval.py` prepares fresh runtime-only inputs, calls
+  locally authenticated Claude Code and saves a ZIP of raw results and
+  integrity evidence for review. `evals/test_table_figure_runner.py` checks
+  plumbing with a stub CLI. A real model run remains pending until the
+  user executes it locally and returns its outputs.
+
 ## v0.3.0
 
 - [x] **1. Enforce the write boundary mechanically.** The skill's headline

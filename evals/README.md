@@ -97,6 +97,36 @@ The existing `run_agent_eval.sh` and toy-paper graders still run their
 original cases; they do not automatically run or grade this new fixture.
 No end-to-end agent score is claimed until that pilot is actually run.
 
+For a locally signed-in Claude Code, run this from a regular terminal
+(macOS, Linux or WSL), not inside an existing Claude session:
+
+```bash
+python3 evals/run_table_figure_eval.py
+```
+
+It creates a fresh workspace outside the checkout, installs only runtime
+skill files and the hook, and calls `claude -p` with a fresh conversation.
+It uses the existing login rather than forwarding `ANTHROPIC_API_KEY`.
+The run pre-approves Bash on this synthetic fixture; the write hook guards
+file edits but is not an OS sandbox. Personal MCP servers are excluded and
+only the built-in file/shell tools are enabled. Use `--model` to select a
+model (default `sonnet`; the actual model is captured in the trace).
+
+The runner saves the prompt, full stream trace, final Markdown report,
+Claude's JSON result, usage/time/model metadata, input hashes, before/after
+workspace snapshots and generated outputs. A ZIP is created in Downloads
+and its full path printed, including on authentication/invocation failure.
+`--output-dir` selects a new destination outside the checkout;
+`--prepare-only` prepares files without calling Claude. Nothing is uploaded.
+Review the ZIP before sharing. Semantic grading and complete provenance
+review are pending; a completed run is not itself a passing eval.
+The answer key is excluded from the workspace, but Bash is not isolated
+from the rest of the machine; this is a local pilot, not a sandboxed benchmark.
+
+Test runner plumbing without a model with
+`python3 -B evals/test_table_figure_runner.py -v`; its fake CLI is explicitly
+a stub and its outputs are not Claude evaluation results.
+
 ## CI
 
 `.github/workflows/ci.yml` runs the deterministic layer plus the repo's

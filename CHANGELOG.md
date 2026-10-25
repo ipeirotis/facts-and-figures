@@ -7,6 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Versions use [Se
 
 ### Added
 
+- A local Claude Code runner for the table/figure pilot that excludes the
+  answer key from its workspace and bundles trace, report, usage/time and
+  integrity snapshots for later grading. Runner tests use a stub, not Claude.
 - Explicit table and existing-graph verification within capability 1,
   distinguishing numeric parity from labels/axes/captions and retaining
   unverifiable outcomes when exact marks or inspection tools are unavailable.
